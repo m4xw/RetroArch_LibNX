@@ -879,10 +879,10 @@ ifeq ($(TARGET), retroarch_3ds)
 endif
 
 ifeq ($(TARGET), retroarch_switch)
-	OBJ += gfx/drivers/switch_gfx.o \
-			input/drivers/switch_input.o \
-      input/drivers_joypad/switch_joypad.o \
-      audio/drivers/switch_audio.o
+	OBJ += input/drivers_joypad/switch_joypad.o \
+         audio/drivers/switch_audio.o
+  #gfx/drivers/switch_gfx.o
+	#input/drivers/switch_input.o
 endif
 
 ifeq ($(HAVE_WAYLAND), 1)
