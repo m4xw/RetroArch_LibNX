@@ -2,7 +2,7 @@
 #include "../../config.h"
 #endif
 
-#include<libtransistor/nx.h>
+#include <switch.h>
 
 #include "../input_driver.h"
 

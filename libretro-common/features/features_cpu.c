@@ -80,8 +80,8 @@
 #endif
 
 #ifdef SWITCH
-#include <libtransistor/types.h>
-#include <libtransistor/svc.h>
+#include <switch/types.h>
+#include <switch/kernel/svc.h>
 #endif
 
 #if defined(_3DS)
