@@ -102,6 +102,7 @@
 #define CLOCK_REALTIME 0
 #endif
 
+
 /* this function is part of iOS 10 now */
 static int ra_clock_gettime(int clk_ik, struct timespec *t)
 {
@@ -130,6 +131,22 @@ static int ra_clock_gettime(int clk_ik, struct timespec *t)
 #endif
 
 #include <string.h>
+
+#ifdef SWITCH
+// (C) libtransistor
+int nanosleep(const struct timespec *rqtp, struct timespec *rmtp) {
+	svcSleepThread(rqtp->tv_nsec + (rqtp->tv_sec * 1000000000));
+	return 0;
+}
+
+long sysconf(int name) {
+	switch(name) {
+	case 8:
+		return 0x1000;
+	}
+	return -1;
+}
+#endif
 
 /**
  * cpu_features_get_perf_counter:
