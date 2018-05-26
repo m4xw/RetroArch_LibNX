@@ -216,13 +216,14 @@ static void *switch_audio_init(const char *device,
 
             if (swa->buffers[i].buffer == NULL)
             {
+                  // TODO: we might memory leak here, but it doesn't really matter
                   goto cleanExit;
             }
 
             /* 
-               This might be the cause of the Audio spike
+               This might be the cause of the Audio noise at load
                But since we gonna use audoutGetReleasedAudioOutBuffer we actually need to append them earlier
-               SORRY!
+               Maybe do a memset 0?
             */
             if (R_FAILED(audoutAppendAudioOutBuffer(&swa->buffers[i])))
             {
