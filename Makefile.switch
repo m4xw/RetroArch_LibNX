@@ -38,18 +38,20 @@ include Makefile.common
 BLACKLIST :=
 BLACKLIST += input/input_overlay.o
 BLACKLIST += tasks/task_overlay.o
+
 OBJ := $(filter-out $(BLACKLIST),$(OBJ))
 
 INCDIRS += -I$(DEVKITPRO)/libnx/include/
 include $(DEVKITPRO)/libnx/switch_rules
 
 APP_ICON := icon.jpg
-APP_VERSION := RetroArch SNES9x libNX
+APP_TITLE := RetroArch SNES9x libNX
+APP_VERSION := 0.1
 APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 
 INCDIRS += -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(LIBNX)/include/
 
-LD := $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-ld
+export LD := $(CXX)
 CFLAGS	:=	 $(DEFINES) -g \
 			-std=gnu11 \
 			-O2 \
@@ -65,7 +67,9 @@ ARFLAGS := rcs
 LIBDIRS	:= $(PORTLIBS) $(LIBNX) $(DEVKITPRO)/devkitA64/aarch64-none-elf/ .
 export LIBPATHS	:= $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-TARGETS := $(TARGET).nro.so
+LDFLAGS := $(CXXFLAGS) -Wl,--allow-multiple-definition -Wl,-T $(DEVKITPRO)/libnx/switch.ld
+LIBS :=  -lnx
+TARGETS := $(TARGET).nro
 
 BUILD_DIR = $(CURDIR)
 
@@ -100,16 +104,13 @@ endif
 
 DEPENDS	:= $(OBJ:.o=.d)
 
+OFILES := $(OBJ) libretro_switch.a
+
 .PHONY: all
 
-all: $(TARGETS)
-
-%.nro.so: $(OBJ) libretro_switch.a %.nacp
-	$(CXX) -Wl,--allow-multiple-definition -o $@ $(OBJ) libretro_switch.a $(LIBPATHS) -lnx
+all: $(OFILES) $(TARGET).nacp $(TARGETS)
 
 clean:
 	rm -f $(OBJ) $(TARGET).nro.so $(TARGET).nro
 
-
 .PHONY: clean all
-
