@@ -130,17 +130,13 @@ static void switch_joypad_destroy(void)
 
 static void switch_joypad_poll(void)
 {
-      // Get Shared mem pointer
-      HidSharedMemory *sharedMem = (HidSharedMemory *)hidGetSharedmemAddr();
+      HidControllerID target = HidControllerID.CONTROLLER_P1_AUTO;
 
-      // controller0
-      HidController *controllers = sharedMem->controllers;
+      JoystickPosition joyPositionLeft, joyPositionRight;
 
-      // Default Joy-Con
-      HidControllerInputEntry ent = controllers[HidControllerID.CONTROLLER_PLAYER_1]->layout[0].entries[0];
+      hidJoystickRead(&joyPositionLeft, target, HidControllerJoystick.JOYSTICK_LEFT);
+      hidJoystickRead(&joyPositionRight, target, HidControllerJoystick.JOYSTICK_RIGHT);
 
-      // Player9 aka Handheld
-      HidControllerInputEntry ent8 = controllers[8]->layout[0].entries[0];
       pad_state[0] = ent.button_state | ent8.button_state;
 
       int16_t lsx, lsy, rsx, rsy;
@@ -148,16 +144,7 @@ static void switch_joypad_poll(void)
       lsy = ent.left_stick_y;
       rsx = ent.right_stick_x;
       rsy = ent.right_stick_y;
-      if (ent8.left_stick_x != 0 || ent8.left_stick_y != 0)
-      { // handheld overrides player 1
-            lsx = ent8.left_stick_x;
-            lsy = ent8.left_stick_y;
-      }
-      if (ent8.right_stick_x != 0 || ent8.right_stick_y != 0)
-      { // handheld overrides player 1
-            rsx = ent8.right_stick_x;
-            rsy = ent8.right_stick_y;
-      }
+
 
       analog_state[0][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_X] = lsx;
       analog_state[0][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_Y] = -lsy;
