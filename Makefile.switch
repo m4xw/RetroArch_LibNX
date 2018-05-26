@@ -40,7 +40,8 @@ BLACKLIST += input/input_overlay.o
 BLACKLIST += tasks/task_overlay.o
 OBJ := $(filter-out $(BLACKLIST),$(OBJ))
 
-INCDIRS := -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(DEVKITPRO)/libnx/include/
+INCDIRS += -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb \
+		   -I$(DEVKITPRO)/libnx/include/ -I$(DEVKITPRO)/devkitA64/aarch64-none-elf/include/
 
 include $(DEVKITPRO)/libnx/switch_rules
 
@@ -49,14 +50,14 @@ APP_VERSION := RetroArch SNES9x libNX
 APP_AUTHOR := Maintainer: M4xw, Credit: Reswitched, libretro
 
 LD := $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-ld
-LDFLAGS += -g -T $(DEVKITPRO)/libnx/switch.ld -L$(PORTLIBS) -L$(LIBNX)/lib -L$(DEVKITPRO)/devkitA64/aarch64-none-elf/lib/ -lstdc++ -lnx
+LDFLAGS += -g -T $(DEVKITPRO)/libnx/switch.ld -L$(PORTLIBS) -L$(LIBNX)/lib -L$(DEVKITPRO)/devkitA64/aarch64-none-elf/lib/ -lc -lm -lstdc++ -lnx
 CFLAGS	+=	$(DEFINES) -g \
 				-O2 \
 				-fomit-frame-pointer \
 				-ffunction-sections \
-				-fdata-sections -march=armv8-a -mtune=cortex-a57 -fPIE -mtp=soft 
+				-fdata-sections -march=armv8-a -mtune=cortex-a57 -fPIE -mtp=soft
 CFLAGS	+=	$(INCLUDE)  -D__SWITCH__=1
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
+CXXFLAGS += $(CFLAGS) -fno-rtti -fno-exceptions -std=c++11
 ARFLAGS := rcs
 LIBDIRS	:= $(PORTLIBS) $(LIBNX) $(DEVKITPRO)/devkitA64/aarch64-none-elf/lib/ .
 
