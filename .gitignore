@@ -145,3 +145,5 @@ retroarch.js.mem
 
 # only ignore .js files in the repo root
 /*.js
+*.d
+.vscode/*
