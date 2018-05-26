@@ -108,7 +108,11 @@ OFILES := $(OBJ) libretro_switch.a
 
 .PHONY: all
 
-all: $(OFILES) $(TARGET).nacp $(TARGETS)
+all: $(TARGETS)
+
+$(TARGET).elf: $(OFILES)
+
+$(TARGET).nro: $(TARGET).elf  $(TARGET).nacp
 
 clean:
 	rm -f $(OBJ) $(TARGET).nro.so $(TARGET).nro
