@@ -39,8 +39,13 @@ static void switch_joypad_autodetect_add(unsigned autoconf_pad)
 
 static bool switch_joypad_init(void *data)
 {
+      // Init
       hidInitialize();
+      
+      // Scan Input
+      hidScanInput();
 
+      // Uhh, should use actual detection with libnx, no?
       switch_joypad_autodetect_add(0);
       switch_joypad_autodetect_add(1);
 
@@ -130,21 +135,24 @@ static void switch_joypad_destroy(void)
 
 static void switch_joypad_poll(void)
 {
-      HidControllerID target = HidControllerID.CONTROLLER_P1_AUTO;
+      HidControllerID target = !hidGetHandheldMode() ? CONTROLLER_PLAYER_1 : CONTROLLER_HANDHELD;
+
+      // Get SharedMem
+      HidSharedMemory* sharedMem = (HidSharedMemory*)hidGetSharedmemAddr();
+
+      pad_state[0] = sharedMem->controllers[target].layouts[hidGetControllerLayout(target)].entries[0].connectionState;
 
       JoystickPosition joyPositionLeft, joyPositionRight;
 
-      hidJoystickRead(&joyPositionLeft, target, HidControllerJoystick.JOYSTICK_LEFT);
-      hidJoystickRead(&joyPositionRight, target, HidControllerJoystick.JOYSTICK_RIGHT);
+      hidJoystickRead(&joyPositionLeft, target, JOYSTICK_LEFT);
+      hidJoystickRead(&joyPositionRight, target, JOYSTICK_RIGHT);
 
-      pad_state[0] = ent.button_state | ent8.button_state;
-
+      // to int16
       int16_t lsx, lsy, rsx, rsy;
-      lsx = ent.left_stick_x;
-      lsy = ent.left_stick_y;
-      rsx = ent.right_stick_x;
-      rsy = ent.right_stick_y;
-
+      lsx = joyPositionLeft.dx;
+      lsy = joyPositionLeft.dy;
+      rsx = joyPositionRight.dx;
+      rsy = joyPositionRight.dy;
 
       analog_state[0][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_X] = lsx;
       analog_state[0][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_Y] = -lsy;
