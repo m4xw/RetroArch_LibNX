@@ -40,7 +40,8 @@ BLACKLIST += input/input_overlay.o
 BLACKLIST += tasks/task_overlay.o
 OBJ := $(filter-out $(BLACKLIST),$(OBJ))
 
-INCDIRS := -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(DEVKITPRO)/libnx/include/
+INCDIRS += -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb \
+		   -I$(DEVKITPRO)/libnx/include/ -I$(DEVKITPRO)/devkitA64/aarch64-none-elf/include/
 
 include $(DEVKITPRO)/libnx/switch_rules
 
@@ -48,18 +49,17 @@ APP_ICON := icon.jpg
 APP_VERSION := RetroArch SNES9x libNX
 APP_AUTHOR := Maintainer: M4xw, Credit: Reswitched, libretro
 
-ARCH := -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
-LDFLAGS += -g $(ARCH) -specs=$(DEVKITPRO)/libnx/switch.specs
-CFLAGS	+=	 $(DEFINES) -g \
+LD := $(DEVKITPRO)/devkitA64/bin/aarch64-none-elf-ld
+LDFLAGS += -g -T $(DEVKITPRO)/libnx/switch.ld -L$(PORTLIBS) -L$(LIBNX)/lib -L$(DEVKITPRO)/devkitA64/aarch64-none-elf/lib/ -lc -lm -lstdc++ -lnx
+CFLAGS	+=	$(DEFINES) -g \
 				-O2 \
 				-fomit-frame-pointer \
 				-ffunction-sections \
-				-fdata-sections
+				-fdata-sections -march=armv8-a -mtune=cortex-a57 -fPIE -mtp=soft
 CFLAGS	+=	$(INCLUDE)  -D__SWITCH__=1
-CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
-ASFLAGS	:= -g $(ARCH)
+CXXFLAGS += $(CFLAGS) -fno-rtti -fno-exceptions -std=c++11
 ARFLAGS := rcs
-LIBDIRS	:= $(PORTLIBS) $(LIBNX) -L.
+LIBDIRS	:= $(PORTLIBS) $(LIBNX) $(DEVKITPRO)/devkitA64/aarch64-none-elf/lib/ .
 
 TARGETS := $(TARGET).nro.so
 
@@ -96,13 +96,16 @@ ifneq ($(ROMFS),)
 	export NROFLAGS += --romfsdir=$(CURDIR)/$(ROMFS)
 endif
 
+DEPENDS	:= $(OBJ:.o=.d)
+
+.PHONY: all
+
 all: $(TARGETS)
 
 %.nro.so: $(OBJ) libretro_switch.a %.nacp
-	@[ -d $@ ] || mkdir -p $@
-	@$(LD) $(LDFLAGS) -T $(DEVKITPRO)/libnx/switch.ld --allow-multiple-definition -o $@ $(OBJ) -l$(DEVKITPRO)/libnx/lib/libnx.a libretro_switch.a -lm
+	$(LD) $(LD_FLAGS) $(LDFLAGS) --allow-multiple-definition -o $@ $(OBJ) libretro_switch.a
 
 clean:
 	rm -f $(OBJ) $(TARGET).nro.so $(TARGET).nro
 
-.PHONY: clean all
+#.PHONY: clean all
