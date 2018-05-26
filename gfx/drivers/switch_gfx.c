@@ -32,6 +32,66 @@
 #include "../../tasks/tasks_internal.h"
 #endif
 
+// (C) libtransistor
+static int pdep(uint32_t mask, uint32_t value)
+{
+      uint32_t out = 0;
+      for (int shift = 0; shift < 32; shift++)
+      {
+            uint32_t bit = 1u << shift;
+            if (mask & bit)
+            {
+                  if (value & 1)
+                        out |= bit;
+                  value >>= 1;
+            }
+      }
+      return out;
+}
+
+static uint32_t swizzle_x(uint32_t v) { return pdep(~0x7B4u, v); }
+static uint32_t swizzle_y(uint32_t v) { return pdep(0x7B4, v); }
+
+void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty)
+{
+      uint32_t *dest = buffer;
+      uint32_t *src = image;
+      int x0 = tx;
+      int y0 = ty;
+      int x1 = x0 + w;
+      int y1 = y0 + h;
+      const uint32_t tile_height = 128;
+      const uint32_t padded_width = 128 * 10;
+
+      // we're doing this in pixels - should just shift the swizzles instead
+      uint32_t offs_x0 = swizzle_x(x0);
+      uint32_t offs_y = swizzle_y(y0);
+      uint32_t x_mask = swizzle_x(~0u);
+      uint32_t y_mask = swizzle_y(~0u);
+      uint32_t incr_y = swizzle_x(padded_width);
+
+      // step offs_x0 to the right row of tiles
+      offs_x0 += incr_y * (y0 / tile_height);
+
+      uint32_t x, y;
+      for (y = y0; y < y1; y++)
+      {
+            uint32_t *dest_line = dest + offs_y;
+            uint32_t offs_x = offs_x0;
+
+            for (x = x0; x < x1; x++)
+            {
+                  uint32_t pixel = *src++;
+                  dest_line[offs_x] = pixel;
+                  offs_x = (offs_x - x_mask) & x_mask;
+            }
+
+            offs_y = (offs_y - y_mask) & y_mask;
+            if (!offs_y)
+                  offs_x0 += incr_y; // wrap into next tile row
+      }
+}
+
 typedef struct
 {
       bool vsync;
@@ -56,8 +116,6 @@ typedef struct
             struct scaler_ctx scaler;
       } menu_texture;
 
-      surface_t surface;
-      revent_h vsync_h;
       uint32_t image[1280 * 720];
 
       struct scaler_ctx scaler;
@@ -68,6 +126,7 @@ typedef struct
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
+      exit(0);
       unsigned x, y;
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
@@ -75,37 +134,17 @@ static void *switch_init(const video_info_t *video,
 
       RARCH_LOG("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
 
-      result_t r = display_init();
-      if (r != RESULT_OK)
-      {
-            free(sw);
-            return NULL;
-      }
-      r = display_open_layer(&sw->surface);
-
-      if (r != RESULT_OK)
-      {
-            display_finalize();
-            free(sw);
-            return NULL;
-      }
-      r = display_get_vsync_event(&sw->vsync_h);
-
-      if (r != RESULT_OK)
-      {
-            display_close_layer(&sw->surface);
-            display_finalize();
-            free(sw);
-            return NULL;
-      }
+      // Needs to be called before gfxInitDefault()
+      gfxInitResolution(1280, 720);
+      gfxInitDefault();
 
       sw->vp.x = 0;
       sw->vp.y = 0;
       sw->vp.width = 1280;
       sw->vp.height = 720;
+
       sw->vp.full_width = 1280;
       sw->vp.full_height = 720;
-      video_driver_set_size(&sw->vp.width, &sw->vp.height);
 
       sw->vsync = video->vsync;
       sw->rgb32 = video->rgb32;
@@ -118,9 +157,7 @@ static void *switch_init(const video_info_t *video,
 
 static void switch_wait_vsync(switch_video_t *sw)
 {
-      uint32_t handle_idx;
-      svcWaitSynchronization(&handle_idx, &sw->vsync_h, 1, 33333333);
-      svcResetSignal(sw->vsync_h);
+      gfxWaitForVsync();
 }
 
 static bool switch_frame(void *data, const void *frame,
@@ -131,7 +168,6 @@ static bool switch_frame(void *data, const void *frame,
       static uint64_t last_frame = 0;
 
       unsigned x, y;
-      result_t r;
       int tgtw, tgth, centerx, centery;
       uint32_t *out_buffer = NULL;
       switch_video_t *sw = data;
@@ -231,21 +267,13 @@ static bool switch_frame(void *data, const void *frame,
       if (msg && strlen(msg) > 0)
             RARCH_LOG("message: %s\n", msg);
 
-      r = surface_dequeue_buffer(&sw->surface, &out_buffer);
+      out_buffer = (uint8_t*)gfxGetFramebuffer(NULL, NULL);
       if (sw->vsync)
             switch_wait_vsync(sw);
-      svcSleepThread(10000);
-      if (r != RESULT_OK)
-      {
-            return true; // just skip the frame
-      }
 
       gfx_slow_swizzling_blit(out_buffer, sw->image, 1280, 720, 0, 0);
 
-      r = surface_queue_buffer(&sw->surface);
-
-      if (r != RESULT_OK)
-            return false;
+      gfxFlushBuffers();
 
       last_frame = svcGetSystemTick();
       return true;
@@ -285,9 +313,7 @@ static bool switch_has_windowed(void *data)
 static void switch_free(void *data)
 {
       switch_video_t *sw = data;
-      svcCloseHandle(sw->vsync_h);
-      display_close_layer(&sw->surface);
-      display_finalize();
+      gfxExit();
       free(sw);
 }
 
