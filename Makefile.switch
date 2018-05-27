@@ -57,8 +57,8 @@ CFLAGS	:=	 $(DEFINES) -g \
 			-O2 \
 			-fomit-frame-pointer \
 			-ffunction-sections \
-			-fdata-sections
-ASFLAGS := -march=armv8-a -mtune=cortex-a57 -fPIE -mtp=soft
+			-fdata-sections -fPIE -specs=$(DEVKITPRO)/libnx/switch.specs
+ASFLAGS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS += $(INCDIRS)
 CFLAGS	+=	$(INCLUDE)  -D__SWITCH__
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
@@ -67,7 +67,7 @@ ARFLAGS := rcs
 LIBDIRS	:= $(PORTLIBS) $(LIBNX) $(DEVKITPRO)/devkitA64/aarch64-none-elf/ .
 export LIBPATHS	:= $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-LDFLAGS := $(CXXFLAGS) -Wl,--allow-multiple-definition -Wl,-T $(DEVKITPRO)/libnx/switch.ld
+LDFLAGS := $(CXXFLAGS) -Wl,--allow-multiple-definition -Wl,--shared -Wl,--gc-sections -Wl,--eh-frame-hdr -Wl,--no-undefined -Wl,-T,$(DEVKITPRO)/libnx/switch.ld -Wl,-pie
 LIBS :=  -lnx
 TARGETS := $(TARGET).nro
 
@@ -115,6 +115,6 @@ $(TARGET).elf: $(OFILES)
 $(TARGET).nro: $(TARGET).elf  $(TARGET).nacp
 
 clean:
-	rm -f $(OBJ) $(TARGET).nro.so $(TARGET).nro
+	rm -f $(OBJ) $(TARGET).elf $(TARGET).nacp $(TARGET).nro
 
 .PHONY: clean all
