@@ -49,16 +49,17 @@ APP_TITLE := RetroArch SNES9x libNX
 APP_VERSION := 0.1
 APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 
+EXEFS_SRC	:= exefs_src
+export BUILD_EXEFS_SRC := $(TOPDIR)/$(EXEFS_SRC)
+
 INCDIRS += -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(LIBNX)/include/
 
 export LD := $(CXX)
 CFLAGS	:=	 $(DEFINES) -g \
 			-std=gnu11 \
 			-O2 \
-			-fomit-frame-pointer \
-			-ffunction-sections \
-			-fdata-sections -fPIE -specs=$(DEVKITPRO)/libnx/switch.specs
-ASFLAGS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
+			-fPIE -specs=$(DEVKITPRO)/libnx/switch.specs -ffunction-sections -fdata-sections -ftls-model=local-exec
+ASFLAGS := -g -march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE -specs=$(LIBNX)/switch.specs
 CFLAGS += $(INCDIRS)
 CFLAGS	+=	$(INCLUDE)  -D__SWITCH__
 CXXFLAGS := $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
@@ -67,7 +68,7 @@ ARFLAGS := rcs
 LIBDIRS	:= $(PORTLIBS) $(LIBNX) $(DEVKITPRO)/devkitA64/aarch64-none-elf/ .
 export LIBPATHS	:= $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 
-LDFLAGS := $(CXXFLAGS) -Wl,--allow-multiple-definition -Wl,--shared -Wl,--gc-sections -Wl,--eh-frame-hdr -Wl,--no-undefined -Wl,-T,$(DEVKITPRO)/libnx/switch.ld -Wl,-pie
+LDFLAGS := $(CXXFLAGS) -Wl,--allow-multiple-definition 
 LIBS :=  -lnx
 TARGETS := $(TARGET).nro
 
@@ -108,11 +109,15 @@ OFILES := $(OBJ) libretro_switch.a
 
 .PHONY: all
 
-all: $(TARGETS)
+all: $(TARGET).pfs0 $(TARGET).nro
 
 $(TARGET).elf: $(OFILES)
 
 $(TARGET).nro: $(TARGET).elf  $(TARGET).nacp
+
+$(TARGET). 	: $(TARGET).nso
+
+$(TARGET).nso :	$(TARGET).elf
 
 clean:
 	rm -f $(OBJ) $(TARGET).elf $(TARGET).nacp $(TARGET).nro
