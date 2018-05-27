@@ -115,7 +115,7 @@ $(TARGET).elf: $(OFILES)
 
 $(TARGET).nro: $(TARGET).elf  $(TARGET).nacp
 
-$(TARGET). 	: $(TARGET).nso
+$(TARGET).pfs0	: $(TARGET).nso
 
 $(TARGET).nso :	$(TARGET).elf
 
