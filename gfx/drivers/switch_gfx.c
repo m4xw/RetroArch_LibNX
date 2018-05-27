@@ -126,7 +126,6 @@ typedef struct
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
-      exit(0);
       unsigned x, y;
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
