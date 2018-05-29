@@ -140,6 +140,9 @@ static void *switch_init(const video_info_t *video,
 
       consoleInit(NULL);
 
+      // INIT HID here
+      hidInitialize();
+
      // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
       sw->vp.x = 0;
       sw->vp.y = 0;
@@ -170,7 +173,9 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
+      // Do this once per Frame!
       hidScanInput();
+
       static uint64_t last_frame = 0;
 
       unsigned x, y;
