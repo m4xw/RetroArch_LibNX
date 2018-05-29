@@ -137,7 +137,7 @@ static void switch_joypad_poll(void)
       // Get SharedMem
       HidSharedMemory* sharedMem = (HidSharedMemory*)hidGetSharedmemAddr();
 
-      pad_state[0] = sharedMem->controllers[target].layouts[hidGetControllerLayout(target)].entries[0].connectionState;
+      pad_state[0] = sharedMem->controllers[target].layouts[hidGetControllerLayout(target)].entries[0].buttons;
 
       JoystickPosition joyPositionLeft, joyPositionRight;
 
