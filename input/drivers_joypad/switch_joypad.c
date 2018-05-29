@@ -39,9 +39,6 @@ static void switch_joypad_autodetect_add(unsigned autoconf_pad)
 
 static bool switch_joypad_init(void *data)
 {
-      // Init
-      hidInitialize();
-      
       // Scan Input
       hidScanInput();
 
