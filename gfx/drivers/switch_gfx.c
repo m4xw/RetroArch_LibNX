@@ -117,7 +117,7 @@ typedef struct
       } menu_texture;
 
       uint32_t image[1280 * 720];
-
+      u32 cnt;
       struct scaler_ctx scaler;
       uint32_t last_width;
       uint32_t last_height;
@@ -131,12 +131,16 @@ static void *switch_init(const video_info_t *video,
       if (!sw)
             return NULL;
 
-      RARCH_LOG("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
-
-      // Needs to be called before gfxInitDefault()
       gfxInitResolution(1280, 720);
       gfxInitDefault();
+      gfxConfigureResolution(1280, 720);
+      gfxSetDrawFlip(false);
+      gfxConfigureTransform(0);
+      gfxSetMode(GfxMode_TiledSingle);
 
+      consoleInit(NULL);
+
+     // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
       sw->vp.x = 0;
       sw->vp.y = 0;
       sw->vp.width = 1280;
@@ -147,6 +151,7 @@ static void *switch_init(const video_info_t *video,
 
       sw->vsync = video->vsync;
       sw->rgb32 = video->rgb32;
+      sw->cnt = 0;
 
       *input = NULL;
       *input_data = NULL;
@@ -163,7 +168,9 @@ static bool switch_frame(void *data, const void *frame,
                          unsigned width, unsigned height,
                          uint64_t frame_count, unsigned pitch,
                          const char *msg, video_frame_info_t *video_info)
+
 {
+      hidScanInput();
       static uint64_t last_frame = 0;
 
       unsigned x, y;
@@ -212,7 +219,7 @@ static bool switch_frame(void *data, const void *frame,
 
                   if (!scaler_ctx_gen_filter(&sw->scaler))
                   {
-                        RARCH_ERR("failed to generate scaler for main image\n");
+                        printf("failed to generate scaler for main image\n");
                         return false;
                   }
 
@@ -223,24 +230,13 @@ static bool switch_frame(void *data, const void *frame,
             scaler_ctx_scale(&sw->scaler, sw->image + (centery * 1280) + centerx, frame);
       }
 
-#if defined(HAVE_MENU)
       if (sw->menu_texture.enable)
       {
             menu_driver_frame(video_info);
 
             if (sw->menu_texture.pixels)
             {
-#if 0
-			if (sw->menu_texture.fullscreen)
-         {
-#endif
                   scaler_ctx_scale(&sw->menu_texture.scaler, sw->image + ((720 - sw->menu_texture.tgth) / 2) * 1280 + ((1280 - sw->menu_texture.tgtw) / 2), sw->menu_texture.pixels);
-#if 0
-         }
-         else
-         {
-         }
-#endif
             }
       }
       else if (video_info->statistics_show)
@@ -253,26 +249,38 @@ static bool switch_frame(void *data, const void *frame,
                                          (const struct font_params *)&video_info->osd_stat_params);
             }
       }
-#endif
 
-#if 0
-   if (frame_count > 6000)
-   {
-      display_finalize();
-      exit(0);
-   }
-#endif
+      //if (msg && strlen(msg) > 0)
+      //      printf("message: %s\n", msg);
 
-      if (msg && strlen(msg) > 0)
-            RARCH_LOG("message: %s\n", msg);
+      width = 0;
+      height = 0;
+      out_buffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
+      if (sw->cnt == 60)
+      {
+            sw->cnt = 0;
+      }
+      else
+      {
+            sw->cnt++;
+      }
 
-      out_buffer = (uint8_t*)gfxGetFramebuffer(NULL, NULL);
-      if (sw->vsync)
-            switch_wait_vsync(sw);
+      //Each pixel is 4-bytes due to RGBA8888.
+      /*u32 pos;
+      for (y = 0; y < height; y++) //Access the buffer linearly.
+      {
+            for (x = 0; x < width; x++)
+            {
+                  pos = y * width + x;
+                  out_buffer[pos] = RGBA8_MAXALPHA(sw->image[pos * 3 + 0] + (sw->cnt * 4), sw->image[pos * 3 + 1], sw->image[pos * 3 + 2]);
+            }
+      }*/
 
       gfx_slow_swizzling_blit(out_buffer, sw->image, 1280, 720, 0, 0);
-
       gfxFlushBuffers();
+      gfxSwapBuffers();
+      if(sw->vsync)
+            switch_wait_vsync(sw);
 
       last_frame = svcGetSystemTick();
       return true;
@@ -364,7 +372,7 @@ static void switch_set_texture_frame(
             sw->menu_texture.pixels = malloc(width * height * (rgb32 ? 4 : 2));
             if (!sw->menu_texture.pixels)
             {
-                  RARCH_ERR("failed to allocate buffer for menu texture\n");
+                  printf("failed to allocate buffer for menu texture\n");
                   return;
             }
 
@@ -397,7 +405,7 @@ static void switch_set_texture_frame(
 
             if (!scaler_ctx_gen_filter(sctx))
             {
-                  RARCH_ERR("failed to generate scaler for menu texture\n");
+                  printf("failed to generate scaler for menu texture\n");
                   return;
             }
       }
