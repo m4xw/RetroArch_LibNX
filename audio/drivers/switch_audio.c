@@ -105,6 +105,7 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
 
 static bool switch_audio_stop(void *data)
 {
+      return true;
       switch_audio_t *swa = (switch_audio_t *)data;
       if (!swa)
             return false;
@@ -124,6 +125,7 @@ static bool switch_audio_stop(void *data)
 
 static bool switch_audio_start(void *data, bool is_shutdown)
 {
+      return true;
       switch_audio_t *swa = (switch_audio_t *)data;
 
       if (swa->is_paused)
@@ -141,6 +143,7 @@ static bool switch_audio_start(void *data, bool is_shutdown)
 
 static bool switch_audio_alive(void *data)
 {
+      return true;
       switch_audio_t *swa = (switch_audio_t *)data;
       if (!swa)
             return false;
@@ -151,7 +154,6 @@ static void switch_audio_free(void *data)
 {
       switch_audio_t *swa = (switch_audio_t *)data;
 
-      audoutExit();
 
       free(swa);
 }
@@ -190,6 +192,7 @@ static void *switch_audio_init(const char *device,
       if (!swa)
             return NULL;
 
+return swa;
       // Init Audio Output
       Result rc = audoutInitialize();
       if (R_FAILED(rc))
