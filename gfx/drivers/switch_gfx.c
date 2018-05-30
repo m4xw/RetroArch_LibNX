@@ -127,6 +127,8 @@ static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
       unsigned x, y;
+
+
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
             return NULL;
@@ -143,8 +145,12 @@ static void *switch_init(const video_info_t *video,
 
       consoleInit(NULL);
 
+      printf("Video initialized..\n");
+
       // INIT HID here
       hidInitialize();
+
+      printf("HID initialized..\n");
 
      // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
       sw->vp.x = 0;
@@ -263,6 +269,8 @@ static bool switch_frame(void *data, const void *frame,
 
       width = 0;
       height = 0;
+
+      //printf("switch_frame getting framebuffer\n");
       out_buffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
       if (sw->cnt == 60)
       {
@@ -291,6 +299,7 @@ static bool switch_frame(void *data, const void *frame,
             switch_wait_vsync(sw);
 
       last_frame = svcGetSystemTick();
+
       return true;
 }
 
