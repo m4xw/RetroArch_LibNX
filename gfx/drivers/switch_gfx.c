@@ -131,12 +131,15 @@ static void *switch_init(const video_info_t *video,
       if (!sw)
             return NULL;
 
+      // Init Resolution before initDefault
       gfxInitResolution(1280, 720);
+      
       gfxInitDefault();
       gfxConfigureResolution(1280, 720);
+
+      // Needed, else its flipped and mirrored
       gfxSetDrawFlip(false);
       gfxConfigureTransform(0);
-      gfxSetMode(GfxMode_TiledSingle);
 
       consoleInit(NULL);
 
