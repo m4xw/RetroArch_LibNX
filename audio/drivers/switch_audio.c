@@ -44,6 +44,7 @@ static size_t switch_audio_buffer_size(void *data)
 // TODO: Needs testing
 static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
 {
+      return size;
       size_t to_write = size;
       switch_audio_t *swa = (switch_audio_t *)data;
 
@@ -91,7 +92,7 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
             Result r = audoutAppendAudioOutBuffer(swa->current_buffer);
             if (R_FAILED(r))
             {
-                  RARCH_ERR("failed to append buffer: 0x%x\n", r);
+                  printf("failed to append buffer: 0x%x\n", r);
                   return -1;
             }
             swa->current_buffer = NULL;
@@ -185,7 +186,7 @@ static void *switch_audio_init(const char *device,
                                unsigned *new_rate)
 {
       switch_audio_t *swa = (switch_audio_t *)calloc(1, sizeof(*swa));
-
+      printf("Init Audio..\n");
       if (!swa)
             return NULL;
 
