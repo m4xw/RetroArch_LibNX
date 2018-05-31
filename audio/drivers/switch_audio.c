@@ -152,6 +152,7 @@ static bool switch_audio_alive(void *data)
 
 static void switch_audio_free(void *data)
 {
+      return;
       switch_audio_t *swa = (switch_audio_t *)data;
 
 
@@ -166,6 +167,7 @@ static bool switch_audio_use_float(void *data)
 
 static size_t switch_audio_write_avail(void *data)
 {
+      return 0;
       switch_audio_t *swa = (switch_audio_t *)data;
 
       if (!swa || !swa->current_buffer)
@@ -176,6 +178,7 @@ static size_t switch_audio_write_avail(void *data)
 
 static void switch_audio_set_nonblock_state(void *data, bool state)
 {
+      return;
       switch_audio_t *swa = (switch_audio_t *)data;
 
       if (swa)
@@ -187,12 +190,12 @@ static void *switch_audio_init(const char *device,
                                unsigned block_frames,
                                unsigned *new_rate)
 {
+      return NULL;
       switch_audio_t *swa = (switch_audio_t *)calloc(1, sizeof(*swa));
       printf("Init Audio..\n");
       if (!swa)
             return NULL;
 
-return swa;
       // Init Audio Output
       Result rc = audoutInitialize();
       if (R_FAILED(rc))
@@ -244,6 +247,11 @@ return swa;
 
 cleanExit:;
       free(swa);
+      printf("Something failed in Audio Init!\n");
+      
+      while(1)
+            ;
+
       return NULL;
 }
 
