@@ -137,7 +137,7 @@ static void switch_joypad_destroy(void)
 
 static void switch_joypad_poll(void)
 {
-      //hidScanInput();
+      hidScanInput();
 
       HidControllerID target = !hidGetHandheldMode() ? CONTROLLER_PLAYER_1 : CONTROLLER_HANDHELD;
 
