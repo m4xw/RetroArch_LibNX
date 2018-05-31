@@ -70,7 +70,7 @@ SOURCES		:=	$(CURDIR)/source
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
-#ROMFS	:=	romfs
+ROMFS	    :=	romfs
 
 APP_ICON := icon.jpg
 APP_TITLE := RetroArch SNES9x libNX

@@ -128,31 +128,27 @@ static void *switch_init(const video_info_t *video,
 {
       unsigned x, y;
 
-
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
             return NULL;
 
       // Init Resolution before initDefault
       gfxInitResolution(1280, 720);
-      
+
       gfxInitDefault();
-      gfxConfigureResolution(1280, 720);
+      //gfxConfigureResolution(1280, 720);
+
+      //consoleInit(NULL);
+      // This line is needed with the current gfx backend if you don't consoleInit
+      gfxSetMode(GfxMode_TiledDouble);
 
       // Needed, else its flipped and mirrored
       gfxSetDrawFlip(false);
       gfxConfigureTransform(0);
 
-      consoleInit(NULL);
-
       printf("Video initialized..\n");
 
-      // INIT HID here
-      hidInitialize();
-
-      printf("HID initialized..\n");
-
-     // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
+      // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
       sw->vp.x = 0;
       sw->vp.y = 0;
       sw->vp.width = 1280;
@@ -295,7 +291,7 @@ static bool switch_frame(void *data, const void *frame,
       gfx_slow_swizzling_blit(out_buffer, sw->image, 1280, 720, 0, 0);
       gfxFlushBuffers();
       gfxSwapBuffers();
-      if(sw->vsync)
+      if (sw->vsync)
             switch_wait_vsync(sw);
 
       last_frame = svcGetSystemTick();
