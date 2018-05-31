@@ -178,9 +178,6 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      // Do this once per Frame!
-      hidScanInput();
-
       static uint64_t last_frame = 0;
 
       unsigned x, y;
