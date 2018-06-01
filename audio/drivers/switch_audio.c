@@ -72,11 +72,13 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
                   if (swa->blocking)
                   {
                         RARCH_LOG("No buffer, blocking...\n");
-                        num = 0;
-
-                        audoutWaitPlayFinish(&swa->current_buffer, &num, 33333333);
-                        if (swa->current_buffer == NULL)
-                              return 0;
+                        
+                        while (swa->current_buffer == NULL)
+                        {
+                              num = 0;
+                              if (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, U64_MAX)))
+                                    return -1;
+                        }
                   }
                   else
                   {
@@ -224,10 +226,7 @@ static void *switch_audio_init(const char *device,
 
             memset(swa->buffers[i].buffer, 0, switch_audio_buffer_size(NULL));
 
-            if (R_FAILED(audoutAppendAudioOutBuffer(&swa->buffers[i])))
-            {
-                  goto cleanExit;
-            }
+            audoutAppendAudioOutBuffer(&swa->buffers[i]);
       }
 
       // Set audio rate
