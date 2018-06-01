@@ -201,6 +201,7 @@ static bool switch_frame(void *data, const void *frame,
       centery = (720 - tgth) / 2;
 
       // Very simple, no overhead (we loop through them anyway!)
+      // TODO: memcpy?? duh.
       if (sw->overlay_enabled)
       {
             for (y = 0; y < 720; y++)
