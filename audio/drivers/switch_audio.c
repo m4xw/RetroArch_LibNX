@@ -28,13 +28,13 @@ typedef struct
       bool is_paused;
       uint64_t last_append;
       unsigned latency;
-      AudioOutBuffer buffers[3];
+      AudioOutBuffer buffers[2];
       AudioOutBuffer *current_buffer;
 } switch_audio_t;
 
 #define SAMPLERATE 48000
 #define CHANNELCOUNT 2
-#define FRAMERATE (1000 / 200) // this is upped
+#define FRAMERATE (1000 / 200)
 #define SAMPLECOUNT (SAMPLERATE / FRAMERATE)
 #define BYTESPERSAMPLE 2
 
@@ -155,10 +155,13 @@ static void switch_audio_free(void *data)
 
       if (swa)
       {
-            if(!swa->is_paused)
+            if (!swa->is_paused)
                   audoutStopAudioOut();
 
             audoutExit();
+
+            for (int i = 0; i < 2; i++)
+                  free(swa->buffers[i].buffer);
             free(swa);
       }
 }
@@ -211,7 +214,7 @@ static void *switch_audio_init(const char *device,
       }
 
       // Create Buffers
-      for (int i = 0; i < 3; i++)
+      for (int i = 0; i < 2; i++)
       {
             swa->buffers[i].next = NULL;
             swa->buffers[i].buffer = memalign(0x1000, switch_audio_buffer_size(NULL));
@@ -219,13 +222,8 @@ static void *switch_audio_init(const char *device,
             swa->buffers[i].data_size = switch_audio_data_size();
             swa->buffers[i].data_offset = 0;
 
-           memset(swa->buffers[i].buffer, 0, switch_audio_buffer_size(NULL));
+            memset(swa->buffers[i].buffer, 0, switch_audio_buffer_size(NULL));
 
-            /* 
-               This might be the cause of the Audio noise at load
-               But since we gonna use audoutGetReleasedAudioOutBuffer we actually need to append them earlier
-               Maybe do a memset 0?
-            */
             if (R_FAILED(audoutAppendAudioOutBuffer(&swa->buffers[i])))
             {
                   goto cleanExit;
