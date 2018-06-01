@@ -28,7 +28,7 @@ typedef struct
       bool is_paused;
       uint64_t last_append;
       unsigned latency;
-      AudioOutBuffer buffers[2];
+      AudioOutBuffer buffers[5];
       AudioOutBuffer *current_buffer;
 } switch_audio_t;
 
@@ -166,7 +166,7 @@ static void switch_audio_free(void *data)
 
             audoutExit();
 
-            for (int i = 0; i < 2; i++)
+            for (int i = 0; i < 5; i++)
                   free(swa->buffers[i].buffer);
 
             free(swa);
@@ -221,7 +221,7 @@ static void *switch_audio_init(const char *device,
       }
 
       // Create Buffers
-      for (int i = 0; i < 2; i++)
+      for (int i = 0; i < 5; i++)
       {
             swa->buffers[i].next = NULL;
             swa->buffers[i].buffer = memalign(0x1000, switch_audio_buffer_size(NULL));
