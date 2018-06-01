@@ -456,6 +456,8 @@ static void switch_overlay_enable(void *data, bool state)
 
       if (!swa)
             return;
+      
+      swa->overlay_enabled = state;
 }
 
 static bool switch_overlay_load(void *data,
