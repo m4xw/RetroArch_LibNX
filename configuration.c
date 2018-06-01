@@ -1758,7 +1758,12 @@ static void config_set_defaults(void)
    for (i = 0; i < MAX_USERS; i++)
    {
       settings->uints.input_joypad_map[i] = i;
+      #ifdef SWITCH
+      settings->uints.input_analog_dpad_mode[i] = ANALOG_DPAD_LSTICK;
+      #else
       settings->uints.input_analog_dpad_mode[i] = ANALOG_DPAD_NONE;
+      #endif
+
       input_config_set_device(i, RETRO_DEVICE_JOYPAD);
       settings->uints.input_mouse_index[i] = 0;
    }
@@ -1787,8 +1792,13 @@ static void config_set_defaults(void)
    *settings->paths.directory_playlist = '\0';
    *settings->paths.directory_autoconfig = '\0';
 #ifdef HAVE_MENU
+#ifdef SWITCH
+   strcpy(settings->paths.directory_menu_content, "/switch");
+   strcpy(settings->paths.directory_menu_config, "/switch");
+#else
    *settings->paths.directory_menu_content = '\0';
    *settings->paths.directory_menu_config = '\0';
+#endif
 #endif
    *settings->paths.directory_video_shader = '\0';
    *settings->paths.directory_video_filter = '\0';
@@ -3477,6 +3487,11 @@ success:
 
 static void parse_config_file(void)
 {
+#ifdef SWITCH
+      if (config_load_file("./retroarch.cfg",
+            false, config_get_ptr()))
+      return;
+#endif
    if (path_is_empty(RARCH_PATH_CONFIG))
    {
       RARCH_LOG("[Config]: Loading default config.\n");
@@ -4007,7 +4022,11 @@ bool config_save_file(const char *path)
       snprintf(cfg, sizeof(cfg), "input_libretro_device_p%u", i + 1);
       config_set_int(conf, cfg, input_config_get_device(i));
       snprintf(cfg, sizeof(cfg), "input_player%u_analog_dpad_mode", i + 1);
+      #ifdef SWITCH
+      config_set_int(conf, cfg, ANALOG_DPAD_LSTICK);
+      #else
       config_set_int(conf, cfg, settings->uints.input_analog_dpad_mode[i]);
+      #endif
       snprintf(cfg, sizeof(cfg), "input_player%u_mouse_index", i + 1);
       config_set_int(conf, cfg, settings->uints.input_mouse_index[i]);
    }
