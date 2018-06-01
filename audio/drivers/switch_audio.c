@@ -55,14 +55,14 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
       switch_audio_t *swa = (switch_audio_t *)data;
 
       if (!swa)
-            return 0;
+            return -1;
 
       if (!swa->current_buffer)
       {
             uint32_t num;
             if (R_FAILED(audoutGetReleasedAudioOutBuffer(&swa->current_buffer, &num)))
             {
-                  return 0;
+                  return -1;
             }
 
             if (num < 1)
@@ -96,7 +96,7 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
       Result r = audoutAppendAudioOutBuffer(swa->current_buffer);
       if (R_FAILED(r))
       {
-            return 0;
+            return -1;
       }
       swa->current_buffer = NULL;
 
@@ -164,6 +164,7 @@ static void switch_audio_free(void *data)
 
             for (int i = 0; i < 2; i++)
                   free(swa->buffers[i].buffer);
+
             free(swa);
       }
 }
@@ -232,7 +233,7 @@ static void *switch_audio_init(const char *device,
       // Set audio rate
       *new_rate = SAMPLERATE;
 
-      swa->is_paused = true;
+      swa->is_paused = false;
       swa->current_buffer = NULL;
       swa->latency = latency;
       swa->last_append = svcGetSystemTick();
