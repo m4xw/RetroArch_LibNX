@@ -34,7 +34,7 @@ typedef struct
 
 #define SAMPLERATE 48000
 #define CHANNELCOUNT 2
-#define FRAMERATE (1000 / 200)
+#define FRAMERATE 30
 #define SAMPLECOUNT (SAMPLERATE / FRAMERATE)
 #define BYTESPERSAMPLE 2
 
