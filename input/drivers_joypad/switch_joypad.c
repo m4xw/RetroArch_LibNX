@@ -39,17 +39,13 @@ static void switch_joypad_autodetect_add(unsigned autoconf_pad)
 
 static bool switch_joypad_init(void *data)
 {
-      // INIT HID here
-      hidInitialize();
-
-      printf("HID initialized..\n");
-
       // Scan Input
       hidScanInput();
 
-      // Uhh, should use actual detection with libnx, no?
       switch_joypad_autodetect_add(0);
       switch_joypad_autodetect_add(1);
+
+      printf("[Input]: HID initialized\n");
 
       return true;
 }
@@ -132,7 +128,6 @@ static bool switch_joypad_query_pad(unsigned pad)
 
 static void switch_joypad_destroy(void)
 {
-      hidExit();
 }
 
 static void switch_joypad_poll(void)
@@ -142,9 +137,12 @@ static void switch_joypad_poll(void)
       HidControllerID target = !hidGetHandheldMode() ? CONTROLLER_PLAYER_1 : CONTROLLER_HANDHELD;
 
       // Get SharedMem
-      HidSharedMemory* sharedMem = (HidSharedMemory*)hidGetSharedmemAddr();
+      HidSharedMemory *sharedMem = (HidSharedMemory *)hidGetSharedmemAddr();
 
-      pad_state[0] = sharedMem->controllers[target].layouts[hidGetControllerLayout(target)].entries[0].buttons;
+      if (sharedMem)
+            pad_state[0] = sharedMem->controllers[target].layouts[hidGetControllerLayout(target)].entries[0].buttons;
+      else
+            printf("[Input]: Can't get hidGetSharedmemAddr\n");
 
       JoystickPosition joyPositionLeft, joyPositionRight;
 
@@ -157,6 +155,7 @@ static void switch_joypad_poll(void)
       lsy = joyPositionLeft.dy;
       rsx = joyPositionRight.dx;
       rsy = joyPositionRight.dy;
+      //printf("%d,%d,%d,%d\n", lsx, lsy, rsx, rsy);
 
       analog_state[0][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_X] = lsx;
       analog_state[0][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_Y] = -lsy;

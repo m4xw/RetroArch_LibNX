@@ -203,10 +203,9 @@ static void *switch_audio_init(const char *device,
                                unsigned *new_rate)
 {
       switch_audio_t *swa = (switch_audio_t *)calloc(1, sizeof(*swa));
-      printf("Init Audio..\n");
       if (!swa)
             return NULL;
-
+      
       // Init Audio Output
       Result rc = audoutInitialize();
       if (R_FAILED(rc))
@@ -243,6 +242,8 @@ static void *switch_audio_init(const char *device,
       swa->last_append = svcGetSystemTick();
       swa->blocking = block_frames;
 
+      printf("[Audio]: Audio initialized\n");
+
       return swa;
 
 cleanExit:;
@@ -250,7 +251,7 @@ cleanExit:;
       if (swa)
             free(swa);
 
-      printf("Something failed in Audio Init!\n");
+      printf("[Audio]: Something failed in Audio Init!\n");
 
       return NULL;
 }

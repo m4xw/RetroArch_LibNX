@@ -60,6 +60,8 @@ static void switch_input_free_input(void *data)
             sw->joypad->destroy();
 
       free(sw);
+      
+      hidExit();
 }
 
 static void *switch_input_init(const char *joypad_driver)
@@ -67,6 +69,9 @@ static void *switch_input_init(const char *joypad_driver)
       switch_input_t *sw = (switch_input_t *)calloc(1, sizeof(*sw));
       if (!sw)
             return NULL;
+
+      // INIT HID here
+      hidInitialize();
 
       sw->joypad = input_joypad_init_driver(joypad_driver, sw);
 

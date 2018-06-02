@@ -130,6 +130,7 @@ static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
       unsigned x, y;
+      void *switchinput = NULL;
 
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
@@ -149,15 +150,13 @@ static void *switch_init(const video_info_t *video,
 
       //gfxConfigureResolution(1280, 720);
 
-      //consoleInit(NULL);
-      // This line is needed with the current gfx backend if you don't consoleInit
-      gfxSetMode(GfxMode_TiledSingle);
+      gfxSetMode(GfxMode_TiledDouble);
 
       // Needed, else its flipped and mirrored
       gfxSetDrawFlip(false);
       gfxConfigureTransform(0);
 
-      printf("Video initialized..\n");
+      printf("[Video]: Video initialized\n");
 
       // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
       sw->vp.x = 0;
@@ -174,8 +173,14 @@ static void *switch_init(const video_info_t *video,
       sw->rgb32 = video->rgb32;
       sw->cnt = 0;
 
-      *input = NULL;
-      *input_data = NULL;
+      // Autoselect driver
+      if (input && input_data)
+      {
+            settings_t *settings = config_get_ptr();
+            switchinput = input_switch.init(settings->arrays.input_joypad_driver);
+            *input = switchinput ? &input_switch : NULL;
+            *input_data = switchinput;
+      }
 
       return sw;
 }
@@ -399,6 +404,7 @@ static void switch_set_texture_frame(
     void *data, const void *frame, bool rgb32,
     unsigned width, unsigned height, float alpha)
 {
+
       switch_video_t *sw = data;
 
       if (!sw->menu_texture.pixels ||

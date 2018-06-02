@@ -843,8 +843,12 @@ static void input_autoconfigure_connect_handler(retro_task_t *task)
    if (!params || string_is_empty(params->name))
       goto end;
 
+#ifndef SWITCH // This seems to be problematic on switch with threading
    if (     !input_autoconfigure_joypad_from_conf_dir(params, task)
          && !input_autoconfigure_joypad_from_conf_internal(params, task))
+#else
+   if ( !input_autoconfigure_joypad_from_conf_internal(params, task))
+#endif
    {
       char msg[255];
 
@@ -866,7 +870,7 @@ static void input_autoconfigure_connect_handler(retro_task_t *task)
                msg_hash_to_str(MSG_DEVICE_NOT_CONFIGURED_FALLBACK));
       }
 #else
-      RARCH_LOG("[Autoconf]: no profiles found for %s (%d/%d).\n",
+      printf("[Autoconf]: no profiles found for %s (%d/%d).\n",
             !string_is_empty(params->name) ? params->name : "N/A",
             params->vid, params->pid);
 
