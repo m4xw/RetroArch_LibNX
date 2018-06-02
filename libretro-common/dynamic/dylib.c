@@ -30,6 +30,8 @@
 #ifdef _WIN32
 #include <compat/posix_string.h>
 #include <windows.h>
+#elif defined(SWITCH)
+#define RTLD_LAZY (0)
 #else
 #include <dlfcn.h>
 #endif
