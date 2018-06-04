@@ -140,12 +140,12 @@ static void *switch_init(const video_info_t *video,
 
       gfxInitDefault();
 
-      //if (!firstInitDone)
-      //{
-      //      firstInitDone = true;
-      //      socketInitializeDefault();
-      //      nxlinkStdio();
-      //}
+      if (!firstInitDone)
+      {
+            firstInitDone = true;
+            socketInitializeDefault();
+            nxlinkStdio();
+      }
 
       //gfxConfigureResolution(1280, 720);
 
@@ -191,7 +191,6 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      exit(0);
       static uint64_t last_frame = 0;
 
       unsigned x, y;
