@@ -6,6 +6,7 @@
 #include <retro_math.h>
 #include <formats/image.h>
 
+#include "../../libretro-common/include/formats/image.h"
 #include <gfx/scaler/scaler.h>
 #include <gfx/scaler/pixconv.h>
 
@@ -99,7 +100,8 @@ typedef struct
       unsigned width, height;
       unsigned rotation;
       struct video_viewport vp;
-
+      struct texture_image *overlay;
+      bool overlay_enabled;
       struct
       {
             bool enable;
@@ -123,31 +125,47 @@ typedef struct
       uint32_t last_height;
 } switch_video_t;
 
+static bool firstInitDone = false;
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
       unsigned x, y;
+
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
             return NULL;
 
+      // Init Resolution before initDefault
       gfxInitResolution(1280, 720);
+
       gfxInitDefault();
-      gfxConfigureResolution(1280, 720);
-      gfxSetDrawFlip(false);
-      gfxConfigureTransform(0);
+
+      if (!firstInitDone)
+      {
+            firstInitDone = true;
+            socketInitializeDefault();
+            nxlinkStdio();
+      }
+
+      //gfxConfigureResolution(1280, 720);
+
+      //consoleInit(NULL);
+      // This line is needed with the current gfx backend if you don't consoleInit
       gfxSetMode(GfxMode_TiledSingle);
 
-      consoleInit(NULL);
+      // Needed, else its flipped and mirrored
+      gfxSetDrawFlip(false);
+      gfxConfigureTransform(0);
 
-      // INIT HID here
-      hidInitialize();
+      printf("Video initialized..\n");
 
-     // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
+      // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
       sw->vp.x = 0;
       sw->vp.y = 0;
       sw->vp.width = 1280;
       sw->vp.height = 720;
+      sw->overlay_enabled = false;
+      sw->overlay = NULL;
 
       sw->vp.full_width = 1280;
       sw->vp.full_height = 720;
@@ -173,9 +191,6 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      // Do this once per Frame!
-      hidScanInput();
-
       static uint64_t last_frame = 0;
 
       unsigned x, y;
@@ -194,12 +209,28 @@ static bool switch_frame(void *data, const void *frame,
       centerx = (1280 - tgtw) / 2;
       centery = (720 - tgth) / 2;
 
-      // clear image to black
-      for (y = 0; y < 720; y++)
+      // Very simple, no overhead (we loop through them anyway!)
+      // TODO: memcpy?? duh.
+      if (sw->overlay_enabled)
       {
-            for (x = 0; x < 1280; x++)
+            for (y = 0; y < 720; y++)
             {
-                  sw->image[y * 1280 + x] = 0xFF000000;
+                  for (x = 0; x < 1280; x++)
+                  {
+                        sw->image[y * 1280 + x] = sw->overlay->pixels[y * 1280 + x];
+                  }
+            }
+      }
+      else
+      {
+            // clear image to black
+            // TODO: memset?? duh.
+            for (y = 0; y < 720; y++)
+            {
+                  for (x = 0; x < 1280; x++)
+                  {
+                        sw->image[y * 1280 + x] = 0xFF000000;
+                  }
             }
       }
 
@@ -255,11 +286,13 @@ static bool switch_frame(void *data, const void *frame,
             }
       }
 
-      //if (msg && strlen(msg) > 0)
-      //      printf("message: %s\n", msg);
+      if (msg && strlen(msg) > 0)
+            printf("message: %s\n", msg);
 
       width = 0;
       height = 0;
+
+      //printf("switch_frame getting framebuffer\n");
       out_buffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
       if (sw->cnt == 60)
       {
@@ -284,10 +317,11 @@ static bool switch_frame(void *data, const void *frame,
       gfx_slow_swizzling_blit(out_buffer, sw->image, 1280, 720, 0, 0);
       gfxFlushBuffers();
       gfxSwapBuffers();
-      if(sw->vsync)
+      if (sw->vsync)
             switch_wait_vsync(sw);
 
       last_frame = svcGetSystemTick();
+
       return true;
 }
 
@@ -425,6 +459,89 @@ static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
       sw->menu_texture.fullscreen = full_screen;
 }
 
+#ifdef HAVE_OVERLAY
+static void switch_overlay_enable(void *data, bool state)
+{
+      switch_video_t *swa = (switch_video_t *)data;
+
+      if (!swa)
+            return;
+
+      swa->overlay_enabled = state;
+}
+
+static bool switch_overlay_load(void *data,
+                                const void *image_data, unsigned num_images)
+{
+      switch_video_t *swa = (switch_video_t *)data;
+
+      struct texture_image *images = (struct texture_image *)image_data;
+
+      if (!swa)
+            return false;
+
+      swa->overlay = images;
+      swa->overlay_enabled = true;
+
+      return true;
+}
+
+static void switch_overlay_tex_geom(void *data,
+                                    unsigned idx, float x, float y, float w, float h)
+{
+      switch_video_t *swa = (switch_video_t *)data;
+
+      if (!swa)
+            return;
+}
+
+static void switch_overlay_vertex_geom(void *data,
+                                       unsigned idx, float x, float y, float w, float h)
+{
+      switch_video_t *swa = (switch_video_t *)data;
+
+      if (!swa)
+            return;
+}
+
+static void switch_overlay_full_screen(void *data, bool enable)
+{
+      switch_video_t *swa = (switch_video_t *)data;
+}
+
+static void switch_overlay_set_alpha(void *data, unsigned idx, float mod)
+{
+      switch_video_t *swa = (switch_video_t *)data;
+
+      if (!swa)
+            return;
+}
+
+static const video_overlay_interface_t switch_overlay = {
+    switch_overlay_enable,
+    switch_overlay_load,
+    switch_overlay_tex_geom,
+    switch_overlay_vertex_geom,
+    switch_overlay_full_screen,
+    switch_overlay_set_alpha,
+};
+
+void switch_overlay_interface(void *data, const video_overlay_interface_t **iface)
+{
+      switch_video_t *swa = (switch_video_t *)data;
+      if (!swa)
+            return;
+      *iface = &switch_overlay;
+
+      switch_video_t *sw = data;
+      if (!sw)
+      {
+            return;
+      }
+}
+
+#endif
+
 static const video_poke_interface_t switch_poke_interface = {
     NULL, /* get_flags */
     NULL, /* set_coords */
@@ -475,7 +592,7 @@ video_driver_t video_switch = {
     switch_read_viewport,
     NULL, /* read_frame_raw */
 #ifdef HAVE_OVERLAY
-    NULL, /* overlay_interface */
+    switch_overlay_interface, /* overlay_interface */
 #endif
     switch_get_poke_interface,
 };

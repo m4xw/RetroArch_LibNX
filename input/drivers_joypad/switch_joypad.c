@@ -39,6 +39,11 @@ static void switch_joypad_autodetect_add(unsigned autoconf_pad)
 
 static bool switch_joypad_init(void *data)
 {
+      // INIT HID here
+      hidInitialize();
+
+      printf("HID initialized..\n");
+
       // Scan Input
       hidScanInput();
 
@@ -132,6 +137,8 @@ static void switch_joypad_destroy(void)
 
 static void switch_joypad_poll(void)
 {
+      hidScanInput();
+
       HidControllerID target = !hidGetHandheldMode() ? CONTROLLER_PLAYER_1 : CONTROLLER_HANDHELD;
 
       // Get SharedMem

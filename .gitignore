@@ -147,3 +147,9 @@ retroarch.js.mem
 /*.js
 *.d
 .vscode/*
+*.lst
+*.nacp
+*.nro
+*.nso
+*.pfs0
+exefs/*
