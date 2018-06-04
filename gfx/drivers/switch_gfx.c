@@ -140,12 +140,12 @@ static void *switch_init(const video_info_t *video,
 
       gfxInitDefault();
 
-      if (!firstInitDone)
-      {
-            firstInitDone = true;
-            socketInitializeDefault();
-            nxlinkStdio();
-      }
+      //if (!firstInitDone)
+      //{
+      //      firstInitDone = true;
+      //      socketInitializeDefault();
+      //      nxlinkStdio();
+      //}
 
       //gfxConfigureResolution(1280, 720);
 
