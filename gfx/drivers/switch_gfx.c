@@ -286,8 +286,8 @@ static bool switch_frame(void *data, const void *frame,
             }
       }
 
-      //if (msg && strlen(msg) > 0)
-      //      printf("message: %s\n", msg);
+      if (msg && strlen(msg) > 0)
+            printf("message: %s\n", msg);
 
       width = 0;
       height = 0;
