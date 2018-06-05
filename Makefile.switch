@@ -73,8 +73,8 @@ INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
 ROMFS	    :=	romfs
 
+#APP_TITLE := RetroArch SNES9x libNX
 APP_ICON := icon.jpg
-APP_TITLE := RetroArch SNES9x libNX
 APP_VERSION := 0.8
 APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 
