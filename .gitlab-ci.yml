@@ -4,6 +4,8 @@ trigger_build:
     - "curl -X POST -F token=$TOKEN_FCEUMM -F ref=master https://git.m4xw.net/api/v4/projects/85/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_VBANEXT -F ref=master https://git.m4xw.net/api/v4/projects/83/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_SNES9X -F ref=master https://git.m4xw.net/api/v4/projects/80/trigger/pipeline"
+    - "curl -X POST -F token=$TOKEN_BEETLE_WSWAN -F ref=master https://git.m4xw.net/api/v4/projects/84/trigger/pipeline"
+    - "curl -X POST -F token=$TOKEN_BEETLE_VBOY -F ref=master https://git.m4xw.net/api/v4/projects/92/trigger/pipeline"
   only:
   - master
 
