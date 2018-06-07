@@ -72,8 +72,12 @@ static bool mutex_inited = false;
 static Mutex safe_double_thread_launch;
 static void *(*start_routine_jump)(void *);
 
+// Access is safe by safe_double_thread_launch Mutex
+static int threadCounter = 0;
+
 static void switch_thread_launcher(void *data)
 {
+    threadCounter++;
     void *(*start_routine_jump_safe)(void *) = start_routine_jump;
 
     mutexUnlock(&safe_double_thread_launch);
@@ -100,7 +104,10 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
     start_routine_jump = start_routine;
-    int rc = threadCreate(&new_switch_thread, switch_thread_launcher, arg, STACKSIZE, prio - 1, -2);
+    if(threadCounter == cpu_features_get_core_amount())
+        threadCounter = 0;
+
+    int rc = threadCreate(&new_switch_thread, switch_thread_launcher, arg, STACKSIZE, prio - 1, threadCounter);
 
     if (R_FAILED(rc))
     {

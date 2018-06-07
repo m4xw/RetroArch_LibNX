@@ -870,7 +870,7 @@ static void input_autoconfigure_connect_handler(retro_task_t *task)
                msg_hash_to_str(MSG_DEVICE_NOT_CONFIGURED_FALLBACK));
       }
 #else
-      printf("[Autoconf]: no profiles found for %s (%d/%d).\n",
+      RARCH_LOG("[Autoconf]: no profiles found for %s (%d/%d).\n",
             !string_is_empty(params->name) ? params->name : "N/A",
             params->vid, params->pid);
 
