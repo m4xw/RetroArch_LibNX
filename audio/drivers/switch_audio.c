@@ -22,6 +22,8 @@
 #include "../audio_driver.h"
 #include "../../verbosity.h"
 
+#include "../../tasks/tasks_internal.h"
+
 typedef struct
 {
       bool blocking;
@@ -31,6 +33,12 @@ typedef struct
       AudioOutBuffer buffers[5];
       AudioOutBuffer *current_buffer;
 } switch_audio_t;
+
+static bool switch_tasks_finder(retro_task_t *task, void *userdata)
+{
+      return task;
+}
+task_finder_data_t switch_tasks_finder_data = {switch_tasks_finder, NULL};
 
 #define SAMPLERATE 48000
 #define CHANNELCOUNT 2
@@ -76,8 +84,14 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
                         while (swa->current_buffer == NULL)
                         {
                               num = 0;
-                              while (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, 3000)))
-                                    ;
+                              while (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, 100000)))
+                              {
+                                    if (task_queue_find(&switch_tasks_finder_data))
+                                    {
+                                          task_queue_check();
+                                          svcSleepThread(0);
+                                    }
+                              }
                         }
                   }
                   else
@@ -89,6 +103,7 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
             swa->current_buffer->data_size = 0;
       }
 
+      memset(swa->current_buffer->buffer, 0, switch_audio_buffer_size(NULL));
       memcpy(swa->current_buffer->buffer, buf, to_write);
       swa->current_buffer->data_size = to_write;
       swa->current_buffer->buffer_size = switch_audio_buffer_size(NULL);
