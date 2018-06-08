@@ -72,7 +72,7 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
                   if (swa->blocking)
                   {
                         RARCH_LOG("No buffer, blocking...\n");
-                        
+
                         while (swa->current_buffer == NULL)
                         {
                               num = 0;
@@ -129,7 +129,7 @@ static bool switch_audio_stop(void *data)
 static bool switch_audio_start(void *data, bool is_shutdown)
 {
       return true;
-      
+
       switch_audio_t *swa = (switch_audio_t *)data;
       if (!swa)
             return false;
@@ -155,8 +155,14 @@ static bool switch_audio_alive(void *data)
       return !swa->is_paused;
 }
 
+static bool audioOutMutexInit = false;
+static Mutex audioOutMutex;
 static void switch_audio_free(void *data)
 {
+      while (mutexTryLock(&audioOutMutex) != 1)
+      {
+      }
+
       switch_audio_t *swa = (switch_audio_t *)data;
 
       if (swa)
@@ -171,6 +177,8 @@ static void switch_audio_free(void *data)
 
             free(swa);
       }
+
+      mutexUnlock(&audioOutMutex);
 }
 
 static bool switch_audio_use_float(void *data)
@@ -205,7 +213,17 @@ static void *switch_audio_init(const char *device,
       switch_audio_t *swa = (switch_audio_t *)calloc(1, sizeof(*swa));
       if (!swa)
             return NULL;
-      
+
+      if (!audioOutMutexInit)
+      {
+            mutexInit(&audioOutMutex);
+            audioOutMutexInit = true;
+      }
+
+      while (mutexTryLock(&audioOutMutex) != 1)
+      {
+      }
+
       // Init Audio Output
       Result rc = audoutInitialize();
       if (R_FAILED(rc))
@@ -244,6 +262,7 @@ static void *switch_audio_init(const char *device,
 
       printf("[Audio]: Audio initialized\n");
 
+      mutexUnlock(&audioOutMutex);
       return swa;
 
 cleanExit:;
@@ -252,6 +271,8 @@ cleanExit:;
             free(swa);
 
       printf("[Audio]: Something failed in Audio Init!\n");
+
+      mutexUnlock(&audioOutMutex);
 
       return NULL;
 }

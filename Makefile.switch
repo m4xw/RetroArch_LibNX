@@ -20,7 +20,7 @@ OBJ :=
 # For threading we need to overwrite some vars with global defines because devkitPro's includes 
 # make it hard for us
 DEFINES_THREAD := -Dpthread_t=Thread -Dpthread_mutex_t=Mutex -Dpthread_mutexattr_t='void*' -Dpthread_attr_t=int -Dpthread_cond_t=CondVar -Dpthread_condattr_t='int'
-DEFINES := -DSWITCH=1 -U__linux__ -U__linux -DRARCH_INTERNAL -D_SYS__PTHREADTYPES_H_ $(DEFINES_THREAD) -DGLOBAL_CONFIG_DIR='"/switch"'
+DEFINES := -DSWITCH=1 -DHAVE_THREADS -U__linux__ -U__linux -DRARCH_INTERNAL -D_SYS__PTHREADTYPES_H_ $(DEFINES_THREAD) -DGLOBAL_CONFIG_DIR='"/switch"'
 
 HAVE_CC_RESAMPLER = 1
 HAVE_MENU_COMMON = 1
@@ -41,7 +41,6 @@ HAVE_MENU = 1
 HAVE_RUNAHEAD = 1
 HAVE_OVERLAY = 1
 HAVE_THREADS = 1
-HAVE_LOGGER = 1
 HAVE_PTHREADS = 1
 
 include Makefile.common

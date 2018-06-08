@@ -25,6 +25,7 @@
 
 #include <time.h>
 #include <errno.h>
+#include <stdio.h>
 
 // memset
 #include <string.h>
@@ -34,12 +35,7 @@
 
 #define THREADVARS_MAGIC 0x21545624 // !TV$
 
-#define pthread_t Thread
-#define pthread_mutex_t Mutex
-#define pthread_mutexattr_t void *
-#define pthread_attr_t int
-#define pthread_cond_t CondVar
-#define pthread_condattr_t int
+extern unsigned cpu_features_get_core_amount(void);
 
 // This structure is exactly 0x20 bytes, if more is needed modify getThreadVars() below
 typedef struct
@@ -65,7 +61,7 @@ static inline ThreadVars *getThreadVars(void)
     return (ThreadVars *)((u8 *)armGetTls() + 0x1E0);
 }
 
-#define STACKSIZE (8 * 1024)
+#define STACKSIZE (16 * 1024)
 
 /* libnx threads return void but pthreads return void pointer */
 static bool mutex_inited = false;
@@ -73,7 +69,7 @@ static Mutex safe_double_thread_launch;
 static void *(*start_routine_jump)(void *);
 
 // Access is safe by safe_double_thread_launch Mutex
-static int threadCounter = 0;
+static int threadCounter = 1;
 
 static void switch_thread_launcher(void *data)
 {
@@ -104,8 +100,8 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
     start_routine_jump = start_routine;
-    if(threadCounter == cpu_features_get_core_amount())
-        threadCounter = 0;
+    if (threadCounter == cpu_features_get_core_amount())
+        threadCounter = 1;
 
     int rc = threadCreate(&new_switch_thread, switch_thread_launcher, arg, STACKSIZE, prio - 1, threadCounter);
 
@@ -115,10 +111,12 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
         return EAGAIN;
     }
 
-    printf("[Threading]: Launching Thread\n");
+    printf("[Threading]: Starting Thread on Core(#%i)\n", threadCounter);
     if (R_FAILED(threadStart(&new_switch_thread)))
     {
-        fatalSimple(MAKERESULT(Module_Libnx, 110));
+        threadClose(&new_switch_thread);
+        mutexUnlock(&safe_double_thread_launch);
+        return EAGAIN;
     }
 
     *thread = new_switch_thread;
@@ -140,32 +138,44 @@ static INLINE pthread_t pthread_self(void)
 static INLINE int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
     mutexInit(mutex);
-    
+
     return 0;
 }
 
 static INLINE int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
     // Nothing
+    *mutex = 0;
+
     return 0;
 }
 
 static INLINE int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-    return mutexTryLock(mutex) ? 0 : 1;
+    while (mutexTryLock(mutex) != 1)
+    {
+        // Keep everything going
+    }
+
+    return 0;
 }
 
 static INLINE int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
     mutexUnlock(mutex);
-    
+
     return 0;
 }
 
 static INLINE void pthread_exit(void *retval)
 {
     (void)retval;
+    printf("Exiting Thread\n");
     svcExitThread();
+    while (1)
+    {
+        //RIP
+    }
 }
 
 static INLINE int pthread_detach(pthread_t thread)
@@ -177,13 +187,16 @@ static INLINE int pthread_detach(pthread_t thread)
 
 static INLINE int pthread_join(pthread_t thread, void **retval)
 {
-    //Result rc = threadWaitForExit(&thread);
-    //*retval = rc;
+    printf("Waiting for Thread Exit\n");
+    threadWaitForExit(&thread);
+    svcSleepThread(10000);
+    threadClose(&thread);
+
     return 0;
 }
 
 static INLINE int pthread_mutex_trylock(pthread_mutex_t *mutex)
-{   
+{
     return mutexTryLock(mutex) ? 0 : 1;
 }
 
@@ -206,7 +219,7 @@ static INLINE int pthread_cond_timedwait(pthread_cond_t *cond, pthread_mutex_t *
 static INLINE int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 {
     condvarInit(cond, NULL);
-    
+
     return 0;
 }
 

@@ -126,6 +126,8 @@ typedef struct
 } switch_video_t;
 
 static bool firstInitDone = false;
+static bool nxlinkDone = false;
+static Mutex gfxMutex;
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
@@ -136,16 +138,26 @@ static void *switch_init(const video_info_t *video,
       if (!sw)
             return NULL;
 
+      if (!firstInitDone)
+      {
+            mutexInit(&gfxMutex);
+            firstInitDone = true;
+      }
+
+      while (mutexTryLock(&gfxMutex) != 1)
+      {
+      }
+
       // Init Resolution before initDefault
       gfxInitResolution(1280, 720);
 
       gfxInitDefault();
 
-      if (!firstInitDone)
+      if (!nxlinkDone)
       {
-            firstInitDone = true;
-            socketInitializeDefault();
-            nxlinkStdio();
+            nxlinkDone = true;
+            //socketInitializeDefault();
+            //nxlinkStdio();
       }
 
       //gfxConfigureResolution(1280, 720);
@@ -182,6 +194,8 @@ static void *switch_init(const video_info_t *video,
             *input_data = switchinput;
       }
 
+      mutexUnlock(&gfxMutex);
+
       return sw;
 }
 
@@ -196,6 +210,10 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
+      while (mutexTryLock(&gfxMutex) != 1)
+      {
+      }
+
       static uint64_t last_frame = 0;
 
       unsigned x, y;
@@ -261,6 +279,7 @@ static bool switch_frame(void *data, const void *frame,
                   if (!scaler_ctx_gen_filter(&sw->scaler))
                   {
                         printf("failed to generate scaler for main image\n");
+                        mutexUnlock(&gfxMutex);
                         return false;
                   }
 
@@ -291,13 +310,12 @@ static bool switch_frame(void *data, const void *frame,
             }
       }
 
-      if (msg && strlen(msg) > 0)
-            printf("message: %s\n", msg);
+      //if (msg && strlen(msg) > 0)
+      //      printf("message: %s\n", msg);
 
       width = 0;
       height = 0;
 
-      //printf("switch_frame getting framebuffer\n");
       out_buffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
       if (sw->cnt == 60)
       {
@@ -326,6 +344,8 @@ static bool switch_frame(void *data, const void *frame,
             switch_wait_vsync(sw);
 
       last_frame = svcGetSystemTick();
+
+      mutexUnlock(&gfxMutex);
 
       return true;
 }
@@ -363,9 +383,15 @@ static bool switch_has_windowed(void *data)
 
 static void switch_free(void *data)
 {
+      while (mutexTryLock(&gfxMutex) != 1)
+      {
+      }
+
       switch_video_t *sw = data;
       gfxExit();
       free(sw);
+
+      mutexUnlock(&gfxMutex);
 }
 
 static bool switch_set_shader(void *data,
@@ -405,6 +431,10 @@ static void switch_set_texture_frame(
     unsigned width, unsigned height, float alpha)
 {
 
+      while (mutexTryLock(&gfxMutex) != 1)
+      {
+      }
+
       switch_video_t *sw = data;
 
       if (!sw->menu_texture.pixels ||
@@ -418,6 +448,7 @@ static void switch_set_texture_frame(
             if (!sw->menu_texture.pixels)
             {
                   printf("failed to allocate buffer for menu texture\n");
+                  mutexUnlock(&gfxMutex);
                   return;
             }
 
@@ -451,11 +482,13 @@ static void switch_set_texture_frame(
             if (!scaler_ctx_gen_filter(sctx))
             {
                   printf("failed to generate scaler for menu texture\n");
+                  mutexUnlock(&gfxMutex);
                   return;
             }
       }
 
       memcpy(sw->menu_texture.pixels, frame, width * height * (rgb32 ? 4 : 2));
+      mutexUnlock(&gfxMutex);
 }
 
 static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
