@@ -76,8 +76,8 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
                         while (swa->current_buffer == NULL)
                         {
                               num = 0;
-                              if (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, U64_MAX)))
-                                    return -1;
+                              while (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, 3000)))
+                                    ;
                         }
                   }
                   else
