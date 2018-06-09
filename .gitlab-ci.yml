@@ -22,4 +22,4 @@ trigger_build:
     - "curl -X POST -F token=$TOKEN_YABAUSE -F ref=${CI_COMMIT_REF_SLUG} https://git.m4xw.net/api/v4/projects/108/trigger/pipeline"
   only:
   - master
-  - feature/threaing
+  - feature/threading
