@@ -126,8 +126,7 @@ void retro_main_log_file_deinit(void)
 void RARCH_LOG_V(const char *tag, const char *fmt, va_list ap)
 {
 #ifdef SWITCH
-       printf(fmt, ap);
-       return;
+       vprintf(fmt, ap);
 #endif
 
 #if TARGET_OS_IPHONE

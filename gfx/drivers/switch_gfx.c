@@ -126,7 +126,6 @@ typedef struct
 } switch_video_t;
 
 static bool firstInitDone = false;
-static bool nxlinkDone = false;
 static Mutex gfxMutex;
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
@@ -138,34 +137,27 @@ static void *switch_init(const video_info_t *video,
       {
             mutexInit(&gfxMutex);
             firstInitDone = true;
+
+            // Init Resolution before initDefault
+            gfxInitResolution(1280, 720);
+
+            gfxInitDefault();
+
+            //gfxConfigureResolution(1280, 720);
+
+            gfxSetMode(GfxMode_TiledDouble);
+
+            // Needed, else its flipped and mirrored
+            gfxSetDrawFlip(false);
+            gfxConfigureTransform(0);
       }
 
       while (!mutexTryLock(&gfxMutex))
-            svcSleepThread(0);
+            ;
 
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
             return NULL;
-
-      // Init Resolution before initDefault
-      gfxInitResolution(1280, 720);
-
-      gfxInitDefault();
-
-      if (!nxlinkDone)
-      {
-            nxlinkDone = true;
-            socketInitializeDefault();
-            nxlinkStdio();
-      }
-
-      //gfxConfigureResolution(1280, 720);
-
-      gfxSetMode(GfxMode_TiledDouble);
-
-      // Needed, else its flipped and mirrored
-      gfxSetDrawFlip(false);
-      gfxConfigureTransform(0);
 
       printf("[Video]: Video initialized\n");
 
@@ -210,7 +202,7 @@ static bool switch_frame(void *data, const void *frame,
 
 {
       while (!mutexTryLock(&gfxMutex))
-            svcSleepThread(0);
+            ;
 
       static uint64_t last_frame = 0;
 
@@ -338,8 +330,8 @@ static bool switch_frame(void *data, const void *frame,
       gfx_slow_swizzling_blit(out_buffer, sw->image, 1280, 720, 0, 0);
       gfxFlushBuffers();
       gfxSwapBuffers();
-      //if (sw->vsync)
-      switch_wait_vsync(sw);
+      if (sw->vsync)
+            switch_wait_vsync(sw);
 
       last_frame = svcGetSystemTick();
 
@@ -382,10 +374,12 @@ static bool switch_has_windowed(void *data)
 static void switch_free(void *data)
 {
       while (!mutexTryLock(&gfxMutex))
-            svcSleepThread(0);
+            ;
 
       switch_video_t *sw = data;
-      gfxExit();
+      if (sw->menu_texture.pixels)
+            free(sw->menu_texture.pixels);
+      //gfxExit();
       free(sw);
 
       mutexUnlock(&gfxMutex);
@@ -428,7 +422,7 @@ static void switch_set_texture_frame(
     unsigned width, unsigned height, float alpha)
 {
       while (!mutexTryLock(&gfxMutex))
-            svcSleepThread(0);
+            ;
 
       switch_video_t *sw = data;
 
@@ -620,7 +614,7 @@ video_driver_t video_switch = {
     switch_read_viewport,
     NULL, /* read_frame_raw */
 #ifdef HAVE_OVERLAY
-    switch_overlay_interface, /* overlay_interface */
+    NULL, /* switch_overlay_interface */
 #endif
     switch_get_poke_interface,
 };

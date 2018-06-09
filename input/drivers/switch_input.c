@@ -25,9 +25,7 @@ typedef struct switch_input
 static void switch_input_poll(void *data)
 {
       while (mutexTryLock(&inputMutex) != 1)
-      {
-            svcSleepThread(0);
-      }
+            ;
 
       switch_input_t *sw = (switch_input_t *)data;
 
@@ -65,9 +63,7 @@ static int16_t switch_input_state(void *data,
 static void switch_input_free_input(void *data)
 {
       while (mutexTryLock(&inputMutex) != 1)
-      {
-            svcSleepThread(0);
-      }
+            ;
 
       switch_input_t *sw = (switch_input_t *)data;
 
@@ -91,9 +87,7 @@ static void *switch_input_init(const char *joypad_driver)
       }
 
       while (mutexTryLock(&inputMutex) != 1)
-      {
-            svcSleepThread(0);
-      }
+            ;
 
       switch_input_t *sw = (switch_input_t *)calloc(1, sizeof(*sw));
       if (!sw)

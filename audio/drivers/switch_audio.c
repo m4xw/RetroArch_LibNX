@@ -63,9 +63,7 @@ static size_t switch_audio_buffer_size(void *data)
 static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
 {
       while (mutexTryLock(&audioOutMutex) != 1)
-      {
-            svcSleepThread(0);
-      }
+            ;
 
       size_t to_write = size;
       switch_audio_t *swa = (switch_audio_t *)data;
@@ -96,13 +94,12 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
                         while (swa->current_buffer == NULL)
                         {
                               num = 0;
-                              while (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, U64_MAX)))
+                              while (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, 3333333)))
                               {
-                                    /*if (task_queue_find(&switch_tasks_finder_data))
-                                    {
-                                          task_queue_check();
-                                    }*/
-                                    svcSleepThread(0);
+                                    //if (task_queue_find(&switch_tasks_finder_data))
+                                    //{
+                                    //      task_queue_check();
+                                    //}
                               }
                         }
                   }
@@ -188,9 +185,7 @@ static bool switch_audio_alive(void *data)
 static void switch_audio_free(void *data)
 {
       while (mutexTryLock(&audioOutMutex) != 1)
-      {
-            svcSleepThread(0);
-      }
+            ;
 
       switch_audio_t *swa = (switch_audio_t *)data;
 
@@ -250,9 +245,7 @@ static void *switch_audio_init(const char *device,
       }
 
       while (mutexTryLock(&audioOutMutex) != 1)
-      {
-            svcSleepThread(0);
-      }
+            ;
 
       // Init Audio Output
       Result rc = audoutInitialize();
