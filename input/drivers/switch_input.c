@@ -26,6 +26,7 @@ static void switch_input_poll(void *data)
 {
       while (mutexTryLock(&inputMutex) != 1)
       {
+            svcSleepThread(0);
       }
 
       switch_input_t *sw = (switch_input_t *)data;
@@ -65,6 +66,7 @@ static void switch_input_free_input(void *data)
 {
       while (mutexTryLock(&inputMutex) != 1)
       {
+            svcSleepThread(0);
       }
 
       switch_input_t *sw = (switch_input_t *)data;
@@ -79,10 +81,6 @@ static void switch_input_free_input(void *data)
 
 static void *switch_input_init(const char *joypad_driver)
 {
-      switch_input_t *sw = (switch_input_t *)calloc(1, sizeof(*sw));
-      if (!sw)
-            return NULL;
-
       if (!inputMutexInit)
       {
             mutexInit(&inputMutex);
@@ -94,7 +92,12 @@ static void *switch_input_init(const char *joypad_driver)
 
       while (mutexTryLock(&inputMutex) != 1)
       {
+            svcSleepThread(0);
       }
+
+      switch_input_t *sw = (switch_input_t *)calloc(1, sizeof(*sw));
+      if (!sw)
+            return NULL;
 
       sw->joypad = input_joypad_init_driver(joypad_driver, sw);
 

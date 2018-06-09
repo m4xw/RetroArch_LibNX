@@ -134,10 +134,6 @@ static void *switch_init(const video_info_t *video,
       unsigned x, y;
       void *switchinput = NULL;
 
-      switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
-      if (!sw)
-            return NULL;
-
       if (!firstInitDone)
       {
             mutexInit(&gfxMutex);
@@ -147,6 +143,10 @@ static void *switch_init(const video_info_t *video,
       while (!mutexTryLock(&gfxMutex))
             svcSleepThread(0);
 
+      switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
+      if (!sw)
+            return NULL;
+
       // Init Resolution before initDefault
       gfxInitResolution(1280, 720);
 
@@ -155,8 +155,8 @@ static void *switch_init(const video_info_t *video,
       if (!nxlinkDone)
       {
             nxlinkDone = true;
-            //socketInitializeDefault();
-            //nxlinkStdio();
+            socketInitializeDefault();
+            nxlinkStdio();
       }
 
       //gfxConfigureResolution(1280, 720);
@@ -232,7 +232,7 @@ static bool switch_frame(void *data, const void *frame,
 
       // Very simple, no overhead (we loop through them anyway!)
       // TODO: memcpy?? duh.
-      if (sw->overlay_enabled)
+      if (sw->overlay_enabled && sw->overlay != NULL)
       {
             for (y = 0; y < 720; y++)
             {

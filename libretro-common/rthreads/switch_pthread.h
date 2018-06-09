@@ -81,6 +81,8 @@ static void switch_thread_launcher(void *data)
     start_routine_jump_safe(data);
 
     svcExitThread();
+    while(1)
+        ;
 }
 
 static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg)
@@ -94,8 +96,9 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
         mutex_inited = true;
     }
 
-    while (mutexTryLock(&safe_double_thread_launch) != 1)
-        ;
+    while (mutexTryLock(&safe_double_thread_launch) != 1){
+        svcSleepThread(0);
+    }
 
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
@@ -168,7 +171,7 @@ static INLINE int pthread_mutex_unlock(pthread_mutex_t *mutex)
 static INLINE void pthread_exit(void *retval)
 {
     (void)retval;
-    printf("Exiting Thread\n");
+    printf("[Threading]: Exiting Thread\n");
     svcExitThread();
 }
 
@@ -181,8 +184,9 @@ static INLINE int pthread_detach(pthread_t thread)
 
 static INLINE int pthread_join(pthread_t thread, void **retval)
 {
-    printf("Waiting for Thread Exit\n");
+    printf("[Threading]: Waiting for Thread Exit\n");
     threadWaitForExit(&thread);
+    svcSleepThread(100000);
     threadClose(&thread);
 
     return 0;
@@ -218,7 +222,7 @@ static INLINE int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr
 
 static INLINE int pthread_cond_signal(pthread_cond_t *cond)
 {
-    condvarWakeOne(cond);
+    condvarWakeAll(cond);
     return 0;
 }
 

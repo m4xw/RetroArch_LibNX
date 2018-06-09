@@ -40,6 +40,8 @@ static void switch_joypad_autodetect_add(unsigned autoconf_pad)
 // This should be protected by the Input Mutex
 static bool switch_joypad_init(void *data)
 {
+      hidReset();
+
       switch_joypad_autodetect_add(0);
       switch_joypad_autodetect_add(1);
 
