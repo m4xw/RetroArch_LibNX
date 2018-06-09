@@ -1,5 +1,5 @@
 variables:
-  BRANCH: {CI_COMMIT_REF_SLUG}
+  BRANCH: feature/threading
 
 trigger_build:
   script:
