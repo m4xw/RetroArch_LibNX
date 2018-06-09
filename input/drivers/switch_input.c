@@ -87,6 +87,9 @@ static void *switch_input_init(const char *joypad_driver)
       {
             mutexInit(&inputMutex);
             inputMutexInit = true;
+
+            // INIT HID here
+            hidInitialize();
       }
 
       while (mutexTryLock(&inputMutex) != 1)

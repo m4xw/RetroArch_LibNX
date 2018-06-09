@@ -144,7 +144,8 @@ static void *switch_init(const video_info_t *video,
             firstInitDone = true;
       }
 
-      mutexLock(&gfxMutex);
+      while (!mutexTryLock(&gfxMutex))
+            svcSleepThread(0);
 
       // Init Resolution before initDefault
       gfxInitResolution(1280, 720);
@@ -208,7 +209,8 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      mutexLock(&gfxMutex);
+      while (!mutexTryLock(&gfxMutex))
+            svcSleepThread(0);
 
       static uint64_t last_frame = 0;
 
@@ -379,7 +381,8 @@ static bool switch_has_windowed(void *data)
 
 static void switch_free(void *data)
 {
-      mutexLock(&gfxMutex);
+      while (!mutexTryLock(&gfxMutex))
+            svcSleepThread(0);
 
       switch_video_t *sw = data;
       gfxExit();
@@ -424,7 +427,8 @@ static void switch_set_texture_frame(
     void *data, const void *frame, bool rgb32,
     unsigned width, unsigned height, float alpha)
 {
-      mutexLock(&gfxMutex);
+      while (!mutexTryLock(&gfxMutex))
+            svcSleepThread(0);
 
       switch_video_t *sw = data;
 

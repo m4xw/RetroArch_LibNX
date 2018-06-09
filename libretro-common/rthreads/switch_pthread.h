@@ -94,7 +94,8 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
         mutex_inited = true;
     }
 
-    mutexLock(&safe_double_thread_launch);
+    while (mutexTryLock(&safe_double_thread_launch) != 1)
+        ;
 
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
@@ -151,8 +152,9 @@ static INLINE int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 static INLINE int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-    mutexLock(mutex);
-
+    while(!mutexTryLock(mutex))
+        svcSleepThread(0);
+        
     return 0;
 }
 
@@ -181,7 +183,6 @@ static INLINE int pthread_join(pthread_t thread, void **retval)
 {
     printf("Waiting for Thread Exit\n");
     threadWaitForExit(&thread);
-    svcSleepThread(10000);
     threadClose(&thread);
 
     return 0;

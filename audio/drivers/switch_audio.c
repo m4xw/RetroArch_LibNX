@@ -86,10 +86,10 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
                               num = 0;
                               while (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, 3000)))
                               {
-                                    if (task_queue_find(&switch_tasks_finder_data))
+                                    /*if (task_queue_find(&switch_tasks_finder_data))
                                     {
                                           task_queue_check();
-                                    }
+                                    }*/
                                     svcSleepThread(0);
                               }
                         }
