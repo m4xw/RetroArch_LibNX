@@ -1,6 +1,6 @@
 trigger_build:
   script:
-    - curl -X POST -F token=$TOKEN_SNES9X2010 -F ref=${CI_COMMIT_REF_SLUG} https://git.m4xw.net/api/v4/projects/87/trigger/pipeline
+    - curl -X POST -F token=$TOKEN_SNES9X2010 -F ref=feature/threading https://git.m4xw.net/api/v4/projects/87/trigger/pipeline
 #    - "curl -X POST -F token=$TOKEN_FCEUMM -F ref=${CI_COMMIT_REF_SLUG} https://git.m4xw.net/api/v4/projects/85/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_VBANEXT -F ref=${CI_COMMIT_REF_SLUG} https://git.m4xw.net/api/v4/projects/83/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_SNES9X -F ref=${CI_COMMIT_REF_SLUG} https://git.m4xw.net/api/v4/projects/80/trigger/pipeline"
