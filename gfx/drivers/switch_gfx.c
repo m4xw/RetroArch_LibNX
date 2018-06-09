@@ -144,9 +144,7 @@ static void *switch_init(const video_info_t *video,
             firstInitDone = true;
       }
 
-      while (mutexTryLock(&gfxMutex) != 1)
-      {
-      }
+      mutexLock(&gfxMutex);
 
       // Init Resolution before initDefault
       gfxInitResolution(1280, 720);
@@ -210,9 +208,7 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      while (mutexTryLock(&gfxMutex) != 1)
-      {
-      }
+      mutexLock(&gfxMutex);
 
       static uint64_t last_frame = 0;
 
@@ -383,9 +379,7 @@ static bool switch_has_windowed(void *data)
 
 static void switch_free(void *data)
 {
-      while (mutexTryLock(&gfxMutex) != 1)
-      {
-      }
+      mutexLock(&gfxMutex);
 
       switch_video_t *sw = data;
       gfxExit();
@@ -430,10 +424,7 @@ static void switch_set_texture_frame(
     void *data, const void *frame, bool rgb32,
     unsigned width, unsigned height, float alpha)
 {
-
-      while (mutexTryLock(&gfxMutex) != 1)
-      {
-      }
+      mutexLock(&gfxMutex);
 
       switch_video_t *sw = data;
 
@@ -571,12 +562,6 @@ void switch_overlay_interface(void *data, const video_overlay_interface_t **ifac
       if (!swa)
             return;
       *iface = &switch_overlay;
-
-      switch_video_t *sw = data;
-      if (!sw)
-      {
-            return;
-      }
 }
 
 #endif

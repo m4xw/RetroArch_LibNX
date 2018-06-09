@@ -79,6 +79,8 @@ static void switch_thread_launcher(void *data)
     mutexUnlock(&safe_double_thread_launch);
 
     start_routine_jump_safe(data);
+
+    svcExitThread();
 }
 
 static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg)
@@ -92,10 +94,7 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
         mutex_inited = true;
     }
 
-    /*Must wait if attempting to launch 2 threads at once to prevent corruption of function pointer*/
-    while (mutexTryLock(&safe_double_thread_launch) != 1)
-    {
-    }
+    mutexLock(&safe_double_thread_launch);
 
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
@@ -152,10 +151,7 @@ static INLINE int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 static INLINE int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-    while (mutexTryLock(mutex) != 1)
-    {
-        // Keep everything going
-    }
+    mutexLock(mutex);
 
     return 0;
 }
@@ -172,10 +168,6 @@ static INLINE void pthread_exit(void *retval)
     (void)retval;
     printf("Exiting Thread\n");
     svcExitThread();
-    while (1)
-    {
-        //RIP
-    }
 }
 
 static INLINE int pthread_detach(pthread_t thread)

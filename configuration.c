@@ -1688,9 +1688,12 @@ static void config_set_defaults(void)
 #endif
    settings->floats.video_scale                = scale;
 
+#ifndef SWITCH
    if (g_defaults.settings.video_threaded_enable != video_threaded)
       video_driver_set_threaded(g_defaults.settings.video_threaded_enable);
-
+#else
+      video_driver_set_threaded(true);
+#endif
    settings->floats.video_msg_color_r          = ((message_color >> 16) & 0xff) / 255.0f;
    settings->floats.video_msg_color_g          = ((message_color >>  8) & 0xff) / 255.0f;
    settings->floats.video_msg_color_b          = ((message_color >>  0) & 0xff) / 255.0f;
