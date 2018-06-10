@@ -125,6 +125,7 @@ typedef struct
       uint32_t last_height;
 } switch_video_t;
 
+static bool firstInitDone = false;
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
@@ -138,6 +139,14 @@ static void *switch_init(const video_info_t *video,
       gfxInitResolution(1280, 720);
 
       gfxInitDefault();
+
+      if (!firstInitDone)
+      {
+            firstInitDone = true;
+            socketInitializeDefault();
+            nxlinkStdio();
+      }
+
       //gfxConfigureResolution(1280, 720);
 
       //consoleInit(NULL);
@@ -277,8 +286,8 @@ static bool switch_frame(void *data, const void *frame,
             }
       }
 
-      //if (msg && strlen(msg) > 0)
-      //      printf("message: %s\n", msg);
+      if (msg && strlen(msg) > 0)
+            printf("message: %s\n", msg);
 
       width = 0;
       height = 0;
@@ -457,7 +466,7 @@ static void switch_overlay_enable(void *data, bool state)
 
       if (!swa)
             return;
-      
+
       swa->overlay_enabled = state;
 }
 

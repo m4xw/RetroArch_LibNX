@@ -153,3 +153,4 @@ retroarch.js.mem
 *.nso
 *.pfs0
 exefs/*
+/icon.jpg
