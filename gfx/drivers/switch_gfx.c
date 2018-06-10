@@ -201,9 +201,6 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      while (!mutexTryLock(&gfxMutex))
-            ;
-
       static uint64_t last_frame = 0;
 
       unsigned x, y;
@@ -269,7 +266,6 @@ static bool switch_frame(void *data, const void *frame,
                   if (!scaler_ctx_gen_filter(&sw->scaler))
                   {
                         printf("failed to generate scaler for main image\n");
-                        mutexUnlock(&gfxMutex);
                         return false;
                   }
 
@@ -330,12 +326,10 @@ static bool switch_frame(void *data, const void *frame,
       gfx_slow_swizzling_blit(out_buffer, sw->image, 1280, 720, 0, 0);
       gfxFlushBuffers();
       gfxSwapBuffers();
-      if (sw->vsync)
+      if(sw->vsync)
             switch_wait_vsync(sw);
 
       last_frame = svcGetSystemTick();
-
-      mutexUnlock(&gfxMutex);
 
       return true;
 }

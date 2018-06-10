@@ -87,7 +87,7 @@ static void switch_thread_launcher(void *data)
 
     start_routine_jump_safe(data);
 
-    pthread_exit(NULL);
+    return;
 }
 
 static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg)
@@ -102,6 +102,7 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
 
         socketInitializeDefault();
         nxlinkStdio();
+        verbosity_enable();
     }
 
     while (mutexTryLock(&safe_double_thread_launch) != 1)
