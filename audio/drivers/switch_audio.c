@@ -34,7 +34,7 @@ typedef struct
 
 #define SAMPLERATE 48000
 #define CHANNELCOUNT 2
-#define FRAMERATE 30
+#define FRAMERATE (1000 / 30)
 #define SAMPLECOUNT (SAMPLERATE / FRAMERATE)
 #define BYTESPERSAMPLE 2
 
@@ -76,8 +76,7 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
                         while (swa->current_buffer == NULL)
                         {
                               num = 0;
-                              if (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, U64_MAX)))
-                                    return -1;
+                              audoutWaitPlayFinish(&swa->current_buffer, &num, 3000);
                         }
                   }
                   else

@@ -123,6 +123,8 @@ typedef struct
       struct scaler_ctx scaler;
       uint32_t last_width;
       uint32_t last_height;
+      bool keep_aspect;
+      bool should_resize;
 } switch_video_t;
 
 static bool firstInitDone = false;
@@ -173,6 +175,8 @@ static void *switch_init(const video_info_t *video,
       sw->vsync = video->vsync;
       sw->rgb32 = video->rgb32;
       sw->cnt = 0;
+      sw->keep_aspect = true;
+      sw->should_resize = true;
 
       *input = NULL;
       *input_data = NULL;
@@ -183,6 +187,20 @@ static void *switch_init(const video_info_t *video,
 static void switch_wait_vsync(switch_video_t *sw)
 {
       gfxWaitForVsync();
+}
+
+static void switch_update_viewport(switch_video_t *sw, video_frame_info_t *video_info)
+{
+      int x = 0;
+      int y = 0;
+      float width = sw->vp.full_width;
+      float height = sw->vp.full_height;
+      settings_t *settings = config_get_ptr();
+      float desired_aspect = video_driver_get_aspect_ratio();
+
+      video_viewport_get_scaled_integer(&sw->vp, sw->vp.full_width, sw->vp.full_height, desired_aspect, sw->keep_aspect);
+
+      sw->should_resize = false;
 }
 
 static bool switch_frame(void *data, const void *frame,
@@ -197,8 +215,13 @@ static bool switch_frame(void *data, const void *frame,
       int tgtw, tgth, centerx, centery;
       uint32_t *out_buffer = NULL;
       switch_video_t *sw = data;
-      int xsf = 1280 / width;
-      int ysf = 720 / height;
+
+      //if (sw->should_resize)
+     //       switch_update_viewport(sw, video_info);
+
+     // printf("w %i, h: %i", sw->width, sw->height);
+      int xsf = sw->vp.full_width / width;
+      int ysf = sw->vp.full_height / height;
       int sf = xsf;
 
       if (ysf < sf)
@@ -206,18 +229,18 @@ static bool switch_frame(void *data, const void *frame,
 
       tgtw = width * sf;
       tgth = height * sf;
-      centerx = (1280 - tgtw) / 2;
-      centery = (720 - tgth) / 2;
+      centerx = (sw->vp.full_width - tgtw) / 2;
+      centery = (sw->vp.full_height - tgth) / 2;
 
       // Very simple, no overhead (we loop through them anyway!)
       // TODO: memcpy?? duh.
-      if (sw->overlay_enabled)
+      if (sw->overlay_enabled && sw->overlay != NULL)
       {
-            for (y = 0; y < 720; y++)
+            for (y = 0; y < sw->vp.full_height; y++)
             {
-                  for (x = 0; x < 1280; x++)
+                  for (x = 0; x < sw->vp.full_width; x++)
                   {
-                        sw->image[y * 1280 + x] = sw->overlay->pixels[y * 1280 + x];
+                        sw->image[y * sw->vp.full_width + x] = sw->overlay->pixels[y * sw->vp.full_width + x];
                   }
             }
       }
@@ -225,19 +248,18 @@ static bool switch_frame(void *data, const void *frame,
       {
             // clear image to black
             // TODO: memset?? duh.
-            for (y = 0; y < 720; y++)
+            for (y = 0; y < sw->vp.full_height; y++)
             {
-                  for (x = 0; x < 1280; x++)
+                  for (x = 0; x < sw->vp.full_width; x++)
                   {
-                        sw->image[y * 1280 + x] = 0xFF000000;
+                        sw->image[y * sw->vp.full_width + x] = 0xFF000000;
                   }
             }
       }
 
       if (width > 0 && height > 0)
       {
-            if (sw->last_width != width ||
-                sw->last_height != height)
+            if (sw->last_width != width || sw->last_height != height)
             {
                   scaler_ctx_gen_reset(&sw->scaler);
 
@@ -246,9 +268,9 @@ static bool switch_frame(void *data, const void *frame,
                   sw->scaler.in_stride = pitch;
                   sw->scaler.in_fmt = sw->rgb32 ? SCALER_FMT_ARGB8888 : SCALER_FMT_RGB565;
 
-                  sw->scaler.out_width = tgtw;
-                  sw->scaler.out_height = tgth;
-                  sw->scaler.out_stride = 1280 * sizeof(uint32_t);
+                  sw->scaler.out_width = sw->vp.full_width;
+                  sw->scaler.out_height = sw->vp.full_height;
+                  sw->scaler.out_stride = sw->vp.full_width * sizeof(uint32_t);
                   sw->scaler.out_fmt = SCALER_FMT_ABGR8888;
 
                   sw->scaler.scaler_type = SCALER_TYPE_POINT;
@@ -263,7 +285,7 @@ static bool switch_frame(void *data, const void *frame,
                   sw->last_height = height;
             }
 
-            scaler_ctx_scale(&sw->scaler, sw->image + (centery * 1280) + centerx, frame);
+            scaler_ctx_scale(&sw->scaler, sw->image + (sw->vp.y * sw->vp.full_width) + sw->vp.x, frame);
       }
 
       if (sw->menu_texture.enable)
@@ -272,7 +294,7 @@ static bool switch_frame(void *data, const void *frame,
 
             if (sw->menu_texture.pixels)
             {
-                  scaler_ctx_scale(&sw->menu_texture.scaler, sw->image + ((720 - sw->menu_texture.tgth) / 2) * 1280 + ((1280 - sw->menu_texture.tgtw) / 2), sw->menu_texture.pixels);
+                  scaler_ctx_scale(&sw->menu_texture.scaler, sw->image + ((sw->vp.full_height - sw->menu_texture.tgth) / 2) * sw->vp.full_width + ((sw->vp.full_width - sw->menu_texture.tgtw) / 2), sw->menu_texture.pixels);
             }
       }
       else if (video_info->statistics_show)
@@ -292,7 +314,6 @@ static bool switch_frame(void *data, const void *frame,
       width = 0;
       height = 0;
 
-      //printf("switch_frame getting framebuffer\n");
       out_buffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
       if (sw->cnt == 60)
       {
@@ -303,18 +324,7 @@ static bool switch_frame(void *data, const void *frame,
             sw->cnt++;
       }
 
-      //Each pixel is 4-bytes due to RGBA8888.
-      /*u32 pos;
-      for (y = 0; y < height; y++) //Access the buffer linearly.
-      {
-            for (x = 0; x < width; x++)
-            {
-                  pos = y * width + x;
-                  out_buffer[pos] = RGBA8_MAXALPHA(sw->image[pos * 3 + 0] + (sw->cnt * 4), sw->image[pos * 3 + 1], sw->image[pos * 3 + 2]);
-            }
-      }*/
-
-      gfx_slow_swizzling_blit(out_buffer, sw->image, 1280, 720, 0, 0);
+      gfx_slow_swizzling_blit(out_buffer, sw->image, sw->vp.full_width, sw->vp.full_height, 0, 0);
       gfxFlushBuffers();
       gfxSwapBuffers();
       if (sw->vsync)
@@ -452,6 +462,45 @@ static void switch_set_texture_frame(
       memcpy(sw->menu_texture.pixels, frame, width * height * (rgb32 ? 4 : 2));
 }
 
+static void switch_set_aspect_ratio(void *data, unsigned aspect_ratio_idx)
+{
+      switch_video_t *sw = (switch_video_t *)data;
+
+      switch (aspect_ratio_idx)
+      {
+      case ASPECT_RATIO_SQUARE:
+            video_driver_set_viewport_square_pixel();
+            break;
+
+      case ASPECT_RATIO_CORE:
+            video_driver_set_viewport_core();
+            break;
+
+      case ASPECT_RATIO_CONFIG:
+            video_driver_set_viewport_config();
+            break;
+
+      default:
+            break;
+      }
+
+      video_driver_set_aspect_ratio_value(aspectratio_lut[aspect_ratio_idx].value);
+
+      if (!sw)
+            return;
+
+      sw->keep_aspect = true;
+      sw->should_resize = true;
+}
+
+static void switch_apply_state_changes(void *data)
+{
+      switch_video_t *sw = (switch_video_t *)data;
+
+      if (sw)
+            sw->should_resize = true;
+}
+
 static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
 {
       switch_video_t *sw = data;
@@ -543,21 +592,21 @@ void switch_overlay_interface(void *data, const video_overlay_interface_t **ifac
 #endif
 
 static const video_poke_interface_t switch_poke_interface = {
-    NULL, /* get_flags */
-    NULL, /* set_coords */
-    NULL, /* set_mvp */
-    NULL, /* load_texture */
-    NULL, /* unload_texture */
-    NULL, /* set_video_mode */
-    NULL, /* get_refresh_rate */
-    NULL, /* set_filtering */
-    NULL, /* get_video_output_size */
-    NULL, /* get_video_output_prev */
-    NULL, /* get_video_output_next */
-    NULL, /* get_current_framebuffer */
-    NULL, /* get_proc_address */
-    NULL, /* set_aspect_ratio */
-    NULL, /* apply_state_changes */
+    NULL,                       /* get_flags */
+    NULL,                       /* set_coords */
+    NULL,                       /* set_mvp */
+    NULL,                       /* load_texture */
+    NULL,                       /* unload_texture */
+    NULL,                       /* set_video_mode */
+    NULL,                       /* get_refresh_rate */
+    NULL,                       /* set_filtering */
+    NULL,                       /* get_video_output_size */
+    NULL,                       /* get_video_output_prev */
+    NULL,                       /* get_video_output_next */
+    NULL,                       /* get_current_framebuffer */
+    NULL,                       /* get_proc_address */
+    switch_set_aspect_ratio,    /* set_aspect_ratio */
+    switch_apply_state_changes, /* apply_state_changes */
     switch_set_texture_frame,
     switch_set_texture_enable,
     NULL, /* set_osd_msg */
