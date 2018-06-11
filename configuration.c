@@ -1693,7 +1693,7 @@ static void config_set_defaults(void)
       video_driver_set_threaded(g_defaults.settings.video_threaded_enable);
 #else
       video_driver_set_threaded(true);
-      configuration_set_bool(settings, settings->bools.video_scale_integer, true);
+      //configuration_set_bool(settings, settings->bools.video_scale_integer, true);
 #endif
 
    settings->floats.video_msg_color_r          = ((message_color >> 16) & 0xff) / 255.0f;

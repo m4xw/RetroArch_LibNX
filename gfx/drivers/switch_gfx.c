@@ -207,11 +207,11 @@ static void switch_update_viewport(switch_video_t *sw, video_frame_info_t *video
 
       // We crash if >1.0f
       printf("Aspect: %f\n", desired_aspect);
-      if (desired_aspect > 1.8f)
+      /*if (desired_aspect > 1.8f)
             desired_aspect = 1.7778f;
 
       if (desired_aspect < 1.2f && desired_aspect != 0.0f)
-            desired_aspect = 1.0f;
+            desired_aspect = 1.0f;*/
 
       if (settings->bools.video_scale_integer)
       {
