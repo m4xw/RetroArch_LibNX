@@ -142,9 +142,9 @@ static void switch_joypad_poll(void)
       HidControllerID target = !hidGetHandheldMode() ? CONTROLLER_PLAYER_1 : CONTROLLER_HANDHELD;
 
       // Get SharedMem
-      HidSharedMemory* sharedMem = (HidSharedMemory*)hidGetSharedmemAddr();
+      //HidSharedMemory* sharedMem = (HidSharedMemory*)hidGetSharedmemAddr();
 
-      pad_state[0] = sharedMem->controllers[target].layouts[hidGetControllerLayout(target)].entries[0].buttons;
+      pad_state[0] = hidKeysDown(target) | hidKeysHeld(target); //sharedMem->controllers[target].layouts[hidGetControllerLayout(target)].entries[0].buttons;
 
       JoystickPosition joyPositionLeft, joyPositionRight;
 
