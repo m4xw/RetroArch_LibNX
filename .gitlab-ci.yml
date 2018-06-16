@@ -4,25 +4,6 @@ variables:
 trigger_build:
   script:
     - "curl -X POST -F token=$TOKEN_SNES9X2010 -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/87/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_FCEUMM -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/85/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_VBANEXT -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/83/trigger/pipeline"
-    - "curl -X POST -F token=$TOKEN_SNES9X -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/80/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_BEETLE_WSWAN -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/84/trigger/pipeline"
-    - "curl -X POST -F token=$TOKEN_BEETLE_VBOY -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/92/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_HANDY -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/86/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_BLUEMSX -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/93/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_SGRAFX -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/94/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_NGP -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/95/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_PROSYSTEM -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/96/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_O2EM -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/97/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_STELLA -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/98/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_NXENGINE -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/99/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_VECX -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/100/trigger/pipeline"
-#    - "curl -X POST -F token=$TOKEN_PCEFAST -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/101/trigger/pipeline"
-    - "curl -X POST -F token=$TOKEN_GAMBATTE -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/104/trigger/pipeline"
-    - "curl -X POST -F token=$TOKEN_VJAGUAR -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/105/trigger/pipeline"
-    - "curl -X POST -F token=$TOKEN_MAME2003 -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/106/trigger/pipeline"
-    - "curl -X POST -F token=$TOKEN_YABAUSE -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/108/trigger/pipeline"
   only:
-  - master
   - feature/threading

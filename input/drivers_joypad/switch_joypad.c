@@ -13,7 +13,7 @@
 #include "string.h"
 
 #ifndef MAX_PADS
-#define MAX_PADS 10
+#define MAX_PADS 8
 #endif
 
 static uint16_t pad_state[MAX_PADS];
@@ -42,8 +42,16 @@ static bool switch_joypad_init(void *data)
 {
       hidReset();
 
-      switch_joypad_autodetect_add(0);
-      switch_joypad_autodetect_add(1);
+      printf("HID initialized..\n");
+
+      // Scan Input
+      hidScanInput();
+
+      // Uhh, should use actual detection with libnx, no?
+      for (int i = 0; i < MAX_PADS; i++)
+      {
+            switch_joypad_autodetect_add(i);
+      }
 
       printf("[Input]: HID initialized\n");
 
@@ -134,33 +142,22 @@ static void switch_joypad_poll(void)
 {
       hidScanInput();
 
-      HidControllerID target = !hidGetHandheldMode() ? CONTROLLER_PLAYER_1 : CONTROLLER_HANDHELD;
+      for (int i = 0; i < MAX_PADS; i++)
+      {
+            HidControllerID target = (i == 0) ? CONTROLLER_P1_AUTO : i;
 
-      // Get SharedMem
-      HidSharedMemory *sharedMem = (HidSharedMemory *)hidGetSharedmemAddr();
+            pad_state[i] = hidKeysDown(target) | hidKeysHeld(target);
 
-      if (sharedMem)
-            pad_state[0] = sharedMem->controllers[target].layouts[hidGetControllerLayout(target)].entries[0].buttons;
-      else
-            printf("[Input]: Can't get hidGetSharedmemAddr\n");
+            JoystickPosition joyPositionLeft, joyPositionRight;
 
-      JoystickPosition joyPositionLeft, joyPositionRight;
+            hidJoystickRead(&joyPositionLeft, target, JOYSTICK_LEFT);
+            hidJoystickRead(&joyPositionRight, target, JOYSTICK_RIGHT);
 
-      hidJoystickRead(&joyPositionLeft, target, JOYSTICK_LEFT);
-      hidJoystickRead(&joyPositionRight, target, JOYSTICK_RIGHT);
-
-      // to int16
-      int16_t lsx, lsy, rsx, rsy;
-      lsx = joyPositionLeft.dx;
-      lsy = joyPositionLeft.dy;
-      rsx = joyPositionRight.dx;
-      rsy = joyPositionRight.dy;
-      //printf("%d,%d,%d,%d\n", lsx, lsy, rsx, rsy);
-
-      analog_state[0][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_X] = lsx;
-      analog_state[0][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_Y] = -lsy;
-      analog_state[0][RETRO_DEVICE_INDEX_ANALOG_RIGHT][RETRO_DEVICE_ID_ANALOG_X] = rsx;
-      analog_state[0][RETRO_DEVICE_INDEX_ANALOG_RIGHT][RETRO_DEVICE_ID_ANALOG_Y] = -rsy;
+            analog_state[i][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_X] = joyPositionLeft.dx;
+            analog_state[i][RETRO_DEVICE_INDEX_ANALOG_LEFT][RETRO_DEVICE_ID_ANALOG_Y] = -joyPositionLeft.dy;
+            analog_state[i][RETRO_DEVICE_INDEX_ANALOG_RIGHT][RETRO_DEVICE_ID_ANALOG_X] = joyPositionRight.dx;
+            analog_state[i][RETRO_DEVICE_INDEX_ANALOG_RIGHT][RETRO_DEVICE_ID_ANALOG_Y] = -joyPositionRight.dy;
+      }
 }
 
 input_device_driver_t switch_joypad = {
