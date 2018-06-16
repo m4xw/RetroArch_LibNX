@@ -151,7 +151,7 @@ static void *switch_init(const video_info_t *video,
 
       //consoleInit(NULL);
       // This line is needed with the current gfx backend if you don't consoleInit
-      gfxSetMode(GfxMode_TiledSingle);
+      gfxSetMode(GfxMode_TiledDouble);
 
       // Needed, else its flipped and mirrored
       gfxSetDrawFlip(false);
@@ -286,8 +286,8 @@ static bool switch_frame(void *data, const void *frame,
             }
       }
 
-      if (msg && strlen(msg) > 0)
-            printf("message: %s\n", msg);
+      //if (msg && strlen(msg) > 0)
+      //      printf("message: %s\n", msg);
 
       width = 0;
       height = 0;
