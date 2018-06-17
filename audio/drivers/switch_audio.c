@@ -277,7 +277,7 @@ static void *switch_audio_init(const char *device,
 
       swa->is_paused = false;
       swa->current_buffer = NULL;
-      swa->latency = latency;
+      swa->latency = (latency > 0) ? latency - 1 : 1; // This is needed else on some cores the audio buffers will never synchronize
       swa->last_append = svcGetSystemTick();
       swa->blocking = block_frames;
 
