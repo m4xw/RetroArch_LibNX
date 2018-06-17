@@ -42,9 +42,9 @@ task_finder_data_t switch_tasks_finder_data = {switch_tasks_finder, NULL};
 
 #define SAMPLERATE 48000
 #define CHANNELCOUNT 2
-#define FRAMERATE 60
-#define SAMPLECOUNT (SAMPLERATE / FRAMERATE)
-#define BYTESPERSAMPLE 2
+#define FRAMERATE (1000 / 30)
+#define SAMPLECOUNT SAMPLERATE / FRAMERATE
+#define BYTESPERSAMPLE sizeof(uint16_t)
 
 static bool audioOutMutexInit = false;
 static Mutex audioOutMutex;
@@ -67,7 +67,6 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
 
       if (!swa)
       {
-            mutexUnlock(&audioOutMutex);
             return -1;
       }
 
@@ -273,11 +272,11 @@ static void *switch_audio_init(const char *device,
       }
 
       // Set audio rate
-      *new_rate = SAMPLERATE;
+      *new_rate = audoutGetSampleRate();
 
       swa->is_paused = false;
       swa->current_buffer = NULL;
-      swa->latency = (latency > 0) ? latency - 1 : 1; // This is needed else on some cores the audio buffers will never synchronize
+      swa->latency = latency;
       swa->last_append = svcGetSystemTick();
       swa->blocking = block_frames;
 
