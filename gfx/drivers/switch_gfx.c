@@ -417,8 +417,8 @@ static bool switch_frame(void *data, const void *frame,
       gfx_slow_swizzling_blit(out_buffer, sw->image, sw->vp.full_width, sw->vp.full_height, 0, 0);
       gfxFlushBuffers();
       gfxSwapBuffers();
-      if (sw->vsync)
-            switch_wait_vsync(sw);
+      //if(sw->vsync)
+      //      switch_wait_vsync(sw);
 
       last_frame = svcGetSystemTick();
 
