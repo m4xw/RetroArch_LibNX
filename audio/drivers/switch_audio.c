@@ -42,7 +42,7 @@ task_finder_data_t switch_tasks_finder_data = {switch_tasks_finder, NULL};
 
 #define SAMPLERATE 48000
 #define CHANNELCOUNT 2
-#define FRAMERATE 90
+#define FRAMERATE 60
 #define SAMPLECOUNT (SAMPLERATE / FRAMERATE)
 #define BYTESPERSAMPLE 2
 
@@ -108,17 +108,22 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
             swa->current_buffer->data_size = 0;
       }
 
-      memset(swa->current_buffer->buffer, 0, switch_audio_buffer_size(NULL));
-      memcpy(swa->current_buffer->buffer, buf, to_write);
-      swa->current_buffer->data_size = to_write;
+      if (to_write > switch_audio_buffer_size(NULL) - swa->current_buffer->data_size)
+            to_write = switch_audio_buffer_size(NULL) - swa->current_buffer->data_size;
+
+      memcpy(((uint8_t *)swa->current_buffer->buffer) + swa->current_buffer->data_size, buf, to_write);
+      swa->current_buffer->data_size += to_write;
       swa->current_buffer->buffer_size = switch_audio_buffer_size(NULL);
 
-      Result r = audoutAppendAudioOutBuffer(swa->current_buffer);
-      if (R_FAILED(r))
+      if (swa->current_buffer->data_size > (48000 * swa->latency) / 1000)
       {
-            return -1;
+            Result r = audoutAppendAudioOutBuffer(swa->current_buffer);
+            if (R_FAILED(r))
+            {
+                  return -1;
+            }
+            swa->current_buffer = NULL;
       }
-      swa->current_buffer = NULL;
 
       swa->last_append = svcGetSystemTick();
 
