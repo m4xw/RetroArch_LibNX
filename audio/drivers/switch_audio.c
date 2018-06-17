@@ -42,7 +42,7 @@ task_finder_data_t switch_tasks_finder_data = {switch_tasks_finder, NULL};
 
 #define SAMPLERATE 48000
 #define CHANNELCOUNT 2
-#define FRAMERATE 90
+#define FRAMERATE 63
 #define SAMPLECOUNT (SAMPLERATE / FRAMERATE)
 #define BYTESPERSAMPLE 2
 
