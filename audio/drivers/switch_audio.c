@@ -22,6 +22,8 @@
 #include "../audio_driver.h"
 #include "../../verbosity.h"
 
+#include "../../tasks/tasks_internal.h"
+
 typedef struct
 {
       bool blocking;
@@ -32,11 +34,17 @@ typedef struct
       AudioOutBuffer *current_buffer;
 } switch_audio_t;
 
+static bool switch_tasks_finder(retro_task_t *task, void *userdata)
+{
+      return task;
+}
+task_finder_data_t switch_tasks_finder_data = {switch_tasks_finder, NULL};
+
 #define SAMPLERATE 48000
 #define CHANNELCOUNT 2
-#define FRAMERATE 30
-#define SAMPLECOUNT (SAMPLERATE / FRAMERATE)
-#define BYTESPERSAMPLE 2
+#define FRAMERATE (1000 / 30)
+#define SAMPLECOUNT SAMPLERATE / FRAMERATE
+#define BYTESPERSAMPLE sizeof(uint16_t)
 
 static uint32_t switch_audio_data_size()
 {
@@ -55,7 +63,9 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
       switch_audio_t *swa = (switch_audio_t *)data;
 
       if (!swa)
+      {
             return -1;
+      }
 
       if (!swa->current_buffer)
       {
@@ -71,13 +81,18 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
 
                   if (swa->blocking)
                   {
-                        RARCH_LOG("No buffer, blocking...\n");
-                        
+                        //RARCH_LOG("No buffer, blocking...\n");
+
                         while (swa->current_buffer == NULL)
                         {
                               num = 0;
                               if (R_FAILED(audoutWaitPlayFinish(&swa->current_buffer, &num, U64_MAX)))
-                                    return -1;
+                              {
+                                    //if (task_queue_find(&switch_tasks_finder_data))
+                                    //{
+                                    //      task_queue_check();
+                                    //}
+                              }
                         }
                   }
                   else
@@ -89,16 +104,22 @@ static ssize_t switch_audio_write(void *data, const void *buf, size_t size)
             swa->current_buffer->data_size = 0;
       }
 
-      memcpy(swa->current_buffer->buffer, buf, to_write);
-      swa->current_buffer->data_size = to_write;
+      if (to_write > switch_audio_buffer_size(NULL) - swa->current_buffer->data_size)
+            to_write = switch_audio_buffer_size(NULL) - swa->current_buffer->data_size;
+
+      memcpy(((uint8_t *)swa->current_buffer->buffer) + swa->current_buffer->data_size, buf, to_write);
+      swa->current_buffer->data_size += to_write;
       swa->current_buffer->buffer_size = switch_audio_buffer_size(NULL);
 
-      Result r = audoutAppendAudioOutBuffer(swa->current_buffer);
-      if (R_FAILED(r))
+      if (swa->current_buffer->data_size > (48000 * swa->latency) / 1000)
       {
-            return -1;
+            Result r = audoutAppendAudioOutBuffer(swa->current_buffer);
+            if (R_FAILED(r))
+            {
+                  return -1;
+            }
+            swa->current_buffer = NULL;
       }
-      swa->current_buffer = NULL;
 
       swa->last_append = svcGetSystemTick();
 
@@ -129,7 +150,7 @@ static bool switch_audio_stop(void *data)
 static bool switch_audio_start(void *data, bool is_shutdown)
 {
       return true;
-      
+
       switch_audio_t *swa = (switch_audio_t *)data;
       if (!swa)
             return false;
@@ -203,7 +224,6 @@ static void *switch_audio_init(const char *device,
                                unsigned *new_rate)
 {
       switch_audio_t *swa = (switch_audio_t *)calloc(1, sizeof(*swa));
-      printf("Init Audio..\n");
       if (!swa)
             return NULL;
 
@@ -235,13 +255,15 @@ static void *switch_audio_init(const char *device,
       }
 
       // Set audio rate
-      *new_rate = SAMPLERATE;
+      *new_rate = audoutGetSampleRate();
 
       swa->is_paused = false;
       swa->current_buffer = NULL;
       swa->latency = latency;
       swa->last_append = svcGetSystemTick();
       swa->blocking = block_frames;
+
+      printf("[Audio]: Audio initialized\n");
 
       return swa;
 
@@ -250,7 +272,7 @@ cleanExit:;
       if (swa)
             free(swa);
 
-      printf("Something failed in Audio Init!\n");
+      printf("[Audio]: Something failed in Audio Init!\n");
 
       return NULL;
 }
