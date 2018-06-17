@@ -1694,7 +1694,8 @@ static void config_set_defaults(void)
 #else
       video_driver_set_threaded(true);
       //configuration_set_bool(settings, settings->bools.video_scale_integer, true);
-      configuration_set_bool(settings, settings->bools.video_vsync, false);
+      configuration_set_bool(settings, settings->bools.video_vsync, true);
+      configuration_set_bool(settings, settings->bools.audio_sync, true);
 #endif
 
    settings->floats.video_msg_color_r          = ((message_color >> 16) & 0xff) / 255.0f;
