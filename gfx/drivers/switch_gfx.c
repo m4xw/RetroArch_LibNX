@@ -127,32 +127,21 @@ typedef struct
       bool should_resize;
 } switch_video_t;
 
-static bool firstInitDone = false;
-static Mutex gfxMutex;
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
       unsigned x, y;
       void *switchinput = NULL;
 
-      if (!firstInitDone)
-      {
-            mutexInit(&gfxMutex);
-            firstInitDone = true;
+      // Init Resolution before initDefault
+      gfxInitResolution(1280, 720);
 
-            // Init Resolution before initDefault
-            gfxInitResolution(1280, 720);
+      gfxInitDefault();
+      gfxSetMode(GfxMode_TiledDouble);
 
-            gfxInitDefault();
-            gfxSetMode(GfxMode_TiledDouble);
-
-            // Needed, else its flipped and mirrored
-            gfxSetDrawFlip(false);
-            gfxConfigureTransform(0);
-      }
-
-      while (!mutexTryLock(&gfxMutex))
-            ;
+      // Needed, else its flipped and mirrored
+      gfxSetDrawFlip(false);
+      gfxConfigureTransform(0);
 
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
@@ -186,8 +175,6 @@ static void *switch_init(const video_info_t *video,
             *input_data = switchinput;
       }
 
-      mutexUnlock(&gfxMutex);
-
       return sw;
 }
 
@@ -206,7 +193,7 @@ static void switch_update_viewport(switch_video_t *sw, video_frame_info_t *video
       float desired_aspect = video_driver_get_aspect_ratio();
 
       // We crash if >1.0f
-      printf("Aspect: %f\n", desired_aspect);
+      printf("[Video] Aspect: %f\n", desired_aspect);
       /*if (desired_aspect > 1.8f)
             desired_aspect = 1.7778f;
 
@@ -309,6 +296,9 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
+      if(!appletMainLoop())
+            return false;
+
       static uint64_t last_frame = 0;
 
       unsigned x, y;
@@ -317,9 +307,9 @@ static bool switch_frame(void *data, const void *frame,
 
       if (sw->should_resize)
       {
-            printf("Requesting new size\n");
+            printf("[Video] Requesting new size\n");
             switch_update_viewport(sw, video_info);
-            printf("fw: %i fh: %i w: %i h: %i x: %i y: %i\n", sw->vp.full_width, sw->vp.full_height, sw->vp.width, sw->vp.height);
+            printf("[Video] fw: %i fh: %i w: %i h: %i x: %i y: %i\n", sw->vp.full_width, sw->vp.full_height, sw->vp.width, sw->vp.height);
       }
 
       // Very simple, no overhead (we loop through them anyway!)
@@ -336,15 +326,7 @@ static bool switch_frame(void *data, const void *frame,
       }
       else
       {
-            // clear image to black
-            // TODO: memset?? duh.
-            for (y = 0; y < sw->vp.full_height; y++)
-            {
-                  for (x = 0; x < sw->vp.full_width; x++)
-                  {
-                        sw->image[y * sw->vp.full_width + x] = 0xFF000000;
-                  }
-            }
+            memset(&sw->image, 0xFF000000, sizeof(sw->image));
       }
 
       if (width > 0 && height > 0)
@@ -458,16 +440,11 @@ static bool switch_has_windowed(void *data)
 
 static void switch_free(void *data)
 {
-      while (!mutexTryLock(&gfxMutex))
-            ;
-
       switch_video_t *sw = data;
       if (sw->menu_texture.pixels)
             free(sw->menu_texture.pixels);
-      //gfxExit();
+      gfxExit();
       free(sw);
-
-      mutexUnlock(&gfxMutex);
 }
 
 static bool switch_set_shader(void *data,
@@ -506,8 +483,6 @@ static void switch_set_texture_frame(
     void *data, const void *frame, bool rgb32,
     unsigned width, unsigned height, float alpha)
 {
-      while (!mutexTryLock(&gfxMutex))
-            ;
 
       switch_video_t *sw = data;
 
@@ -522,7 +497,6 @@ static void switch_set_texture_frame(
             if (!sw->menu_texture.pixels)
             {
                   printf("failed to allocate buffer for menu texture\n");
-                  mutexUnlock(&gfxMutex);
                   return;
             }
 
@@ -556,13 +530,11 @@ static void switch_set_texture_frame(
             if (!scaler_ctx_gen_filter(sctx))
             {
                   printf("failed to generate scaler for menu texture\n");
-                  mutexUnlock(&gfxMutex);
                   return;
             }
       }
 
       memcpy(sw->menu_texture.pixels, frame, width * height * (rgb32 ? 4 : 2));
-      mutexUnlock(&gfxMutex);
 }
 
 static void switch_apply_state_changes(void *data)
@@ -707,7 +679,7 @@ video_driver_t video_switch = {
     switch_read_viewport,
     NULL, /* read_frame_raw */
 #ifdef HAVE_OVERLAY
-    NULL, /* switch_overlay_interface */
+    switch_overlay_interface, /* switch_overlay_interface */
 #endif
     switch_get_poke_interface,
 };

@@ -32,6 +32,7 @@
 
 #include <retro_inline.h>
 #include <switch.h>
+#include "../../verbosity.h"
 
 #define THREADVARS_MAGIC 0x21545624 // !TV$
 
@@ -61,7 +62,7 @@ static inline ThreadVars *getThreadVars(void)
     return (ThreadVars *)((u8 *)armGetTls() + 0x1E0);
 }
 
-#define STACKSIZE (16 * 1024)
+#define STACKSIZE (8 * 1024)
 
 /* libnx threads return void but pthreads return void pointer */
 static bool mutex_inited = false;
@@ -76,7 +77,7 @@ static INLINE void pthread_exit(void *retval)
 }
 
 // Access is safe by safe_double_thread_launch Mutex
-static int threadCounter = 1;
+static uint32_t threadCounter = 1;
 
 static void switch_thread_launcher(void *data)
 {
@@ -100,14 +101,14 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
         mutexInit(&safe_double_thread_launch);
         mutex_inited = true;
 
+#if defined(SWITCH) && defined(NXLINK)
         socketInitializeDefault();
         nxlinkStdio();
         verbosity_enable();
+#endif
     }
 
-    while (mutexTryLock(&safe_double_thread_launch) != 1)
-    {
-    }
+    mutexLock(&safe_double_thread_launch);
 
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
@@ -115,7 +116,7 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
     if (threadCounter == cpu_features_get_core_amount())
         threadCounter = 1;
 
-    int rc = threadCreate(&new_switch_thread, switch_thread_launcher, arg, STACKSIZE, prio - 1, threadCounter);
+    int rc = threadCreate(&new_switch_thread, switch_thread_launcher, arg, STACKSIZE, prio - 1, 1);
 
     if (R_FAILED(rc))
     {
@@ -123,7 +124,7 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
         return EAGAIN;
     }
 
-    printf("[Threading]: Starting Thread on Core(#%i)\n", threadCounter);
+    printf("[Threading]: Starting Thread(#%i)\n", threadCounter);
     if (R_FAILED(threadStart(&new_switch_thread)))
     {
         threadClose(&new_switch_thread);
@@ -164,8 +165,7 @@ static INLINE int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 static INLINE int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-    while (!mutexTryLock(mutex))
-        ;
+    mutexLock(mutex);
 
     return 0;
 }
@@ -188,7 +188,7 @@ static INLINE int pthread_join(pthread_t thread, void **retval)
 {
     printf("[Threading]: Waiting for Thread Exit\n");
     threadWaitForExit(&thread);
-    //threadClose(&thread);
+    threadClose(&thread);
 
     return 0;
 }

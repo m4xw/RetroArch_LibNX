@@ -11,10 +11,7 @@
 
 #include "../input_driver.h"
 
-#define MAX_PADS 10
-
-static bool inputMutexInit = false;
-static Mutex inputMutex;
+#define MAX_PADS 8
 
 typedef struct switch_input
 {
@@ -24,15 +21,10 @@ typedef struct switch_input
 
 static void switch_input_poll(void *data)
 {
-      while (mutexTryLock(&inputMutex) != 1)
-            ;
-
       switch_input_t *sw = (switch_input_t *)data;
 
       if (sw->joypad)
             sw->joypad->poll();
-
-      mutexUnlock(&inputMutex);
 }
 
 static int16_t switch_input_state(void *data,
@@ -62,40 +54,21 @@ static int16_t switch_input_state(void *data,
 
 static void switch_input_free_input(void *data)
 {
-      while (mutexTryLock(&inputMutex) != 1)
-            ;
-
       switch_input_t *sw = (switch_input_t *)data;
 
       if (sw && sw->joypad)
             sw->joypad->destroy();
 
       free(sw);
-
-      mutexUnlock(&inputMutex);
 }
 
 static void *switch_input_init(const char *joypad_driver)
 {
-      if (!inputMutexInit)
-      {
-            mutexInit(&inputMutex);
-            inputMutexInit = true;
-
-            // INIT HID here
-            hidInitialize();
-      }
-
-      while (mutexTryLock(&inputMutex) != 1)
-            ;
-
       switch_input_t *sw = (switch_input_t *)calloc(1, sizeof(*sw));
       if (!sw)
             return NULL;
 
       sw->joypad = input_joypad_init_driver(joypad_driver, sw);
-
-      mutexUnlock(&inputMutex);
 
       return sw;
 }

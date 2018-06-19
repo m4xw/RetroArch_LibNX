@@ -46,9 +46,6 @@ task_finder_data_t switch_tasks_finder_data = {switch_tasks_finder, NULL};
 #define SAMPLECOUNT SAMPLERATE / FRAMERATE
 #define BYTESPERSAMPLE sizeof(uint16_t)
 
-static bool audioOutMutexInit = false;
-static Mutex audioOutMutex;
-
 static uint32_t switch_audio_data_size()
 {
       return (SAMPLECOUNT * CHANNELCOUNT * BYTESPERSAMPLE);
@@ -181,9 +178,6 @@ static bool switch_audio_alive(void *data)
 
 static void switch_audio_free(void *data)
 {
-      while (mutexTryLock(&audioOutMutex) != 1)
-            ;
-
       switch_audio_t *swa = (switch_audio_t *)data;
 
       if (swa)
@@ -198,8 +192,6 @@ static void switch_audio_free(void *data)
 
             free(swa);
       }
-
-      mutexUnlock(&audioOutMutex);
 }
 
 static bool switch_audio_use_float(void *data)
@@ -234,15 +226,6 @@ static void *switch_audio_init(const char *device,
       switch_audio_t *swa = (switch_audio_t *)calloc(1, sizeof(*swa));
       if (!swa)
             return NULL;
-
-      if (!audioOutMutexInit)
-      {
-            mutexInit(&audioOutMutex);
-            audioOutMutexInit = true;
-      }
-
-      while (mutexTryLock(&audioOutMutex) != 1)
-            ;
 
       // Init Audio Output
       Result rc = audoutInitialize();
@@ -282,7 +265,6 @@ static void *switch_audio_init(const char *device,
 
       printf("[Audio]: Audio initialized\n");
 
-      mutexUnlock(&audioOutMutex);
       return swa;
 
 cleanExit:;
@@ -291,8 +273,6 @@ cleanExit:;
             free(swa);
 
       printf("[Audio]: Something failed in Audio Init!\n");
-
-      mutexUnlock(&audioOutMutex);
 
       return NULL;
 }
