@@ -113,8 +113,8 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
     svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
 
     start_routine_jump = start_routine;
-    if (threadCounter == cpu_features_get_core_amount())
-        threadCounter = 1;
+    //if (threadCounter == cpu_features_get_core_amount())
+    //    threadCounter = 1;
 
     int rc = threadCreate(&new_switch_thread, switch_thread_launcher, arg, STACKSIZE, prio - 1, 1);
 
