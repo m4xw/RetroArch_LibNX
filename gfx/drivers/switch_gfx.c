@@ -125,6 +125,10 @@ typedef struct
       uint32_t last_height;
       bool keep_aspect;
       bool should_resize;
+
+      bool o_size;
+      uint32_t o_height;
+      uint32_t o_width;
 } switch_video_t;
 
 static void *switch_init(const video_info_t *video,
@@ -149,11 +153,11 @@ static void *switch_init(const video_info_t *video,
 
       printf("[Video]: Video initialized\n");
 
-      // printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
+      printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
       sw->vp.x = 0;
       sw->vp.y = 0;
-      sw->vp.width = 1280;
-      sw->vp.height = 720;
+      sw->vp.width = sw->o_width = video->width;
+      sw->vp.height = sw->o_height = video->height;
       sw->overlay_enabled = false;
       sw->overlay = NULL;
 
@@ -165,6 +169,7 @@ static void *switch_init(const video_info_t *video,
       sw->cnt = 0;
       sw->keep_aspect = true;
       sw->should_resize = true;
+      sw->o_size = true;
 
       // Autoselect driver
       if (input && input_data)
@@ -189,6 +194,19 @@ static void switch_update_viewport(switch_video_t *sw, video_frame_info_t *video
       int y = 0;
       float width = sw->vp.full_width;
       float height = sw->vp.full_height;
+      if (sw->o_size)
+      {
+            width = sw->o_width;
+            height = sw->o_height;
+            sw->vp.x = (int)(((float)sw->vp.full_width - width)) / 2;
+            sw->vp.y = (int)(((float)sw->vp.full_height - height)) / 2;
+
+            sw->vp.width = width;
+            sw->vp.height = height;
+
+            return;
+      }
+
       settings_t *settings = config_get_ptr();
       float desired_aspect = video_driver_get_aspect_ratio();
 
@@ -242,6 +260,7 @@ static void switch_update_viewport(switch_video_t *sw, video_frame_info_t *video
 
             sw->vp.x = x;
             sw->vp.y = y;
+
             sw->vp.width = width;
             sw->vp.height = height;
       }
@@ -251,8 +270,6 @@ static void switch_update_viewport(switch_video_t *sw, video_frame_info_t *video
             sw->vp.width = width;
             sw->vp.height = height;
       }
-
-      sw->should_resize = false;
 }
 
 static void switch_set_aspect_ratio(void *data, unsigned aspect_ratio_idx)
@@ -263,6 +280,9 @@ static void switch_set_aspect_ratio(void *data, unsigned aspect_ratio_idx)
             return;
 
       sw->keep_aspect = true;
+      sw->o_size = false;
+      
+      settings_t *settings = config_get_ptr();
 
       switch (aspect_ratio_idx)
       {
@@ -272,6 +292,8 @@ static void switch_set_aspect_ratio(void *data, unsigned aspect_ratio_idx)
 
       case ASPECT_RATIO_CORE:
             video_driver_set_viewport_core();
+            sw->o_size = true;
+            sw->keep_aspect = false;
             break;
 
       case ASPECT_RATIO_CONFIG:
@@ -279,6 +301,12 @@ static void switch_set_aspect_ratio(void *data, unsigned aspect_ratio_idx)
             break;
 
       case ASPECT_RATIO_CUSTOM:
+            if (settings->bools.video_scale_integer)
+            {
+                  video_driver_set_viewport_core();
+                  sw->o_size = true;
+                  sw->keep_aspect = false;
+            }
             break;
 
       default:
@@ -296,7 +324,7 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      if(!appletMainLoop())
+      if (!appletMainLoop())
             return false;
 
       static uint64_t last_frame = 0;
@@ -308,8 +336,34 @@ static bool switch_frame(void *data, const void *frame,
       if (sw->should_resize)
       {
             printf("[Video] Requesting new size\n");
+            printf("[Video] fw: %i fh: %i w: %i h: %i x: %i y: %i\n", sw->vp.full_width, sw->vp.full_height, sw->vp.width, sw->vp.height, sw->vp.x, sw->vp.y);
             switch_update_viewport(sw, video_info);
-            printf("[Video] fw: %i fh: %i w: %i h: %i x: %i y: %i\n", sw->vp.full_width, sw->vp.full_height, sw->vp.width, sw->vp.height);
+            printf("[Video] fw: %i fh: %i w: %i h: %i x: %i y: %i\n", sw->vp.full_width, sw->vp.full_height, sw->vp.width, sw->vp.height, sw->vp.x, sw->vp.y);
+
+            scaler_ctx_gen_reset(&sw->scaler);
+
+            sw->scaler.in_width = width;
+            sw->scaler.in_height = height;
+            sw->scaler.in_stride = pitch;
+            sw->scaler.in_fmt = sw->rgb32 ? SCALER_FMT_ARGB8888 : SCALER_FMT_RGB565;
+
+            sw->scaler.out_width = sw->vp.width;
+            sw->scaler.out_height = sw->vp.height;
+            sw->scaler.out_stride = sw->vp.full_width * sizeof(uint32_t);
+            sw->scaler.out_fmt = SCALER_FMT_ABGR8888;
+
+            sw->scaler.scaler_type = SCALER_TYPE_POINT;
+
+            if (!scaler_ctx_gen_filter(&sw->scaler))
+            {
+                  printf("failed to generate scaler for main image\n");
+                  return false;
+            }
+
+            sw->last_width = width;
+            sw->last_height = height;
+
+            sw->should_resize = false;
       }
 
       // Very simple, no overhead (we loop through them anyway!)
@@ -332,33 +386,7 @@ static bool switch_frame(void *data, const void *frame,
 
       if (width > 0 && height > 0)
       {
-            if (sw->last_width != sw->vp.width || sw->last_height != sw->vp.height)
-            {
-                  scaler_ctx_gen_reset(&sw->scaler);
-
-                  sw->scaler.in_width = width;
-                  sw->scaler.in_height = height;
-                  sw->scaler.in_stride = pitch;
-                  sw->scaler.in_fmt = sw->rgb32 ? SCALER_FMT_ARGB8888 : SCALER_FMT_RGB565;
-
-                  sw->scaler.out_width = sw->vp.width;
-                  sw->scaler.out_height = sw->vp.height;
-                  sw->scaler.out_stride = sw->vp.full_width * sizeof(uint32_t);
-                  sw->scaler.out_fmt = SCALER_FMT_ABGR8888;
-
-                  sw->scaler.scaler_type = SCALER_TYPE_POINT;
-
-                  if (!scaler_ctx_gen_filter(&sw->scaler))
-                  {
-                        printf("failed to generate scaler for main image\n");
-                        return false;
-                  }
-
-                  sw->last_width = sw->vp.width;
-                  sw->last_height = sw->vp.height;
-            }
-
-            scaler_ctx_scale(&sw->scaler, sw->image + (sw->vp.y * sw->vp.width) + sw->vp.x, frame);
+            scaler_ctx_scale(&sw->scaler, sw->image + (sw->vp.y * sw->vp.full_width) + sw->vp.x, frame);
       }
 
       if (sw->menu_texture.enable)
@@ -541,9 +569,6 @@ static void switch_set_texture_frame(
 static void switch_apply_state_changes(void *data)
 {
       switch_video_t *sw = (switch_video_t *)data;
-
-      if (sw)
-            sw->should_resize = true;
 }
 
 static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
