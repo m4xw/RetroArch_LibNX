@@ -326,7 +326,8 @@ static bool switch_frame(void *data, const void *frame,
       }
       else
       {
-            memset(&sw->image, 0xFF000000, sizeof(sw->image));
+            // uint32_t image[1280 * 720];
+            memset(&sw->image, 0, sizeof(sw->image));
       }
 
       if (width > 0 && height > 0)
@@ -555,6 +556,8 @@ static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
 #ifdef HAVE_OVERLAY
 static void switch_overlay_enable(void *data, bool state)
 {
+      printf("[Video] Enabled Overlay\n");
+
       switch_video_t *swa = (switch_video_t *)data;
 
       if (!swa)
