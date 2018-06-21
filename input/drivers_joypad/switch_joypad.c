@@ -37,13 +37,9 @@ static void switch_joypad_autodetect_add(unsigned autoconf_pad)
             input_config_set_device_name(autoconf_pad, switch_joypad_name(autoconf_pad));
 }
 
+// This should be protected by the Input Mutex
 static bool switch_joypad_init(void *data)
 {
-      // INIT HID here
-      hidInitialize();
-
-      printf("HID initialized..\n");
-
       // Scan Input
       hidScanInput();
 
@@ -52,6 +48,8 @@ static bool switch_joypad_init(void *data)
       {
             switch_joypad_autodetect_add(i);
       }
+
+      printf("[Input]: HID initialized\n");
 
       return true;
 }
@@ -134,7 +132,6 @@ static bool switch_joypad_query_pad(unsigned pad)
 
 static void switch_joypad_destroy(void)
 {
-      hidExit();
 }
 
 static void switch_joypad_poll(void)

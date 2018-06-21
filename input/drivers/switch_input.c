@@ -11,7 +11,7 @@
 
 #include "../input_driver.h"
 
-#define MAX_PADS 10
+#define MAX_PADS 8
 
 typedef struct switch_input
 {
