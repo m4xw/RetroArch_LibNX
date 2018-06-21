@@ -165,9 +165,7 @@ static INLINE int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 static INLINE int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-    mutexLock(mutex);
-
-    return 0;
+    return mutexTryLock(mutex) ? 0 : 1;
 }
 
 static INLINE int pthread_mutex_unlock(pthread_mutex_t *mutex)

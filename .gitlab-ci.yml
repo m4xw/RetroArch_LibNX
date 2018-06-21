@@ -23,5 +23,7 @@ trigger_build:
     - "curl -X POST -F token=$TOKEN_VJAGUAR -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/105/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_MAME2003 -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/106/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_YABAUSE -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/108/trigger/pipeline"
+    - "curl -X POST -F token=$TOKEN_4DO -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/111/trigger/pipeline"
+    - "curl -X POST -F token=$TOKEN_GPLUSGX -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/112/trigger/pipeline"
   only:
   - master
