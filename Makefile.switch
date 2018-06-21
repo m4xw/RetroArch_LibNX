@@ -17,7 +17,10 @@ GRIFFIN_BUILD           = 0
 
 OBJ := 
 
-DEFINES := -DSWITCH=1 -U__linux__ -U__linux -DRARCH_INTERNAL -DGLOBAL_CONFIG_DIR='"/switch"'
+# For threading we need to overwrite some vars with global defines because devkitPro's includes 
+# make it hard for us
+DEFINES_THREAD := -Dpthread_t=Thread -Dpthread_mutex_t=Mutex -Dpthread_mutexattr_t='void*' -Dpthread_attr_t=int -Dpthread_cond_t=CondVar -Dpthread_condattr_t='int'
+DEFINES := -DSWITCH=1 -DHAVE_THREADS -DNXLINK=1 -U__linux__ -U__linux -DRARCH_INTERNAL -D_SYS__PTHREADTYPES_H_ $(DEFINES_THREAD) -DGLOBAL_CONFIG_DIR='"/switch"'
 
 HAVE_CC_RESAMPLER = 1
 HAVE_MENU_COMMON = 1
@@ -37,6 +40,8 @@ HAVE_STATIC_AUDIO_FILTERS = 1
 HAVE_MENU = 1
 HAVE_RUNAHEAD = 1
 HAVE_OVERLAY = 1
+HAVE_THREADS = 1
+HAVE_PTHREADS = 1
 
 include Makefile.common
 BLACKLIST :=
@@ -84,16 +89,16 @@ APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
 
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
-			$(ARCH) $(DEFINES) -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(LIBNX)/include
+			$(ARCH) $(DEFINES) -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(LIBNX)/include -include $(LIBNX)/include/switch.h
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__
 
 CXXFLAGS	:= $(CFLAGS) -fno-rtti -fno-exceptions -std=gnu++11
 
 ASFLAGS	:=	-g $(ARCH)
-LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,--allow-multiple-definition -Wl,-Map,$(notdir $*.map)
+LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,--allow-multiple-definition -Wl,-Map,$(notdir $*.map)
 
-LIBS	:= -lnx -lc -lm -lstdc++
+LIBS	:= -lnx -lm -lstdc++
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
@@ -177,7 +182,7 @@ endif
 
 DEPENDS	:=	$(OFILES:.o=.d)
 
-.PHONY: $(BUILD) clean all
+.PHONY: clean all
 
 #---------------------------------------------------------------------------------
 # main targets

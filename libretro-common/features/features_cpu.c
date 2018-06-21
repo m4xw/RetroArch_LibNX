@@ -638,6 +638,8 @@ unsigned cpu_features_get_core_amount(void)
       return 1;
 #elif defined(VITA)
       return 4;
+#elif defined(SWITCH)
+      return 4;
 #elif defined(_3DS)
       u8 device_model = 0xFF;
       CFGU_GetSystemModel(&device_model); /*(0 = O3DS, 1 = O3DSXL, 2 = N3DS, 3 = 2DS, 4 = N3DSXL, 5 = N2DSXL)*/
