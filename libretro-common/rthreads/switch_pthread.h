@@ -100,12 +100,6 @@ static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, 
     {
         mutexInit(&safe_double_thread_launch);
         mutex_inited = true;
-
-#if defined(SWITCH) && defined(NXLINK)
-        socketInitializeDefault();
-        nxlinkStdio();
-        verbosity_enable();
-#endif
     }
 
     mutexLock(&safe_double_thread_launch);

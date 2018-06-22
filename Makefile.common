@@ -138,6 +138,10 @@ ifeq ($(TARGET), retroarch_3ds)
 	OBJ += frontend/drivers/platform_ctr.o
 endif
 
+ifeq ($(TARGET), retroarch_switch)
+	OBJ += frontend/drivers/platform_switch.o
+endif
+
 # Git
 
 GIT_VERSION := $(shell git rev-parse --short HEAD 2>/dev/null)
