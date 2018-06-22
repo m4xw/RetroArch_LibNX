@@ -137,21 +137,9 @@ static void *switch_init(const video_info_t *video,
       unsigned x, y;
       void *switchinput = NULL;
 
-      // Init Resolution before initDefault
-      gfxInitResolution(1280, 720);
-
-      gfxInitDefault();
-      gfxSetMode(GfxMode_TiledDouble);
-
-      // Needed, else its flipped and mirrored
-      gfxSetDrawFlip(false);
-      gfxConfigureTransform(0);
-
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
       if (!sw)
             return NULL;
-
-      printf("[Video]: Video initialized\n");
 
       printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
       sw->vp.x = 0;
@@ -281,7 +269,7 @@ static void switch_set_aspect_ratio(void *data, unsigned aspect_ratio_idx)
 
       sw->keep_aspect = true;
       sw->o_size = false;
-      
+
       settings_t *settings = config_get_ptr();
 
       switch (aspect_ratio_idx)
@@ -472,7 +460,7 @@ static void switch_free(void *data)
       switch_video_t *sw = data;
       if (sw->menu_texture.pixels)
             free(sw->menu_texture.pixels);
-      gfxExit();
+
       free(sw);
 }
 
