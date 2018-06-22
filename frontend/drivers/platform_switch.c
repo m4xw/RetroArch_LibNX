@@ -37,7 +37,7 @@ static uint64_t frontend_switch_get_mem_used(void);
 
 static void get_first_valid_core(char *path_return)
 {
-    *path_return = '\0';
+    strcpy(path_return, elf_path_cst);
 }
 
 static void frontend_switch_get_environment_settings(int *argc, char *argv[], void *args, void *params_data)
@@ -103,6 +103,7 @@ static void frontend_switch_deinit(void *data)
     (void)data;
 
 #ifndef IS_SALAMANDER
+    // Not sure why thats here, taken from the 3ds port
     verbosity_enable();
 
     gfxExit();
