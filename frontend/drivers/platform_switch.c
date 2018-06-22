@@ -203,7 +203,7 @@ static int frontend_switch_get_rating(void)
 
 enum frontend_architecture frontend_switch_get_architecture(void)
 {
-    return FRONTEND_ARCH_ARM;
+    return FRONTEND_ARCH_ARMV8;
 }
 
 static int frontend_switch_parse_drive_list(void *data, bool load_content)
