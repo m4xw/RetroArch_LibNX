@@ -23,6 +23,9 @@
 #include "../../verbosity.h"
 #include "../../defaults.h"
 #include "../../paths.h"
+#include "../../retroarch.h"
+#include "../../file_path_special.h"
+#include "../../audio/audio_driver.h"
 
 #ifndef IS_SALAMANDER
 #ifdef HAVE_MENU
@@ -31,13 +34,35 @@
 #endif
 
 static enum frontend_fork switch_fork_mode = FRONTEND_FORK_NONE;
-static const char *elf_path_cst = "/retroarch/retroarch_switch.nro";
+static const char *elf_path_cst = "/switch/retroarch_switch.nro";
 
 static uint64_t frontend_switch_get_mem_used(void);
 
 static void get_first_valid_core(char *path_return)
 {
-    strcpy(path_return, elf_path_cst);
+    DIR *dir;
+    struct dirent *ent;
+    const char *extension = ".nro";
+
+    path_return[0] = '\0';
+
+    dir = opendir("/retroarch/cores");
+    if (dir != NULL)
+    {
+        while (ent = readdir(dir))
+        {
+            if (ent == NULL)
+                break;
+            if (strlen(ent->d_name) > strlen(extension) && !strcmp(ent->d_name + strlen(ent->d_name) - strlen(extension), extension))
+            {
+                strcpy(path_return, "/retroarch/cores");
+                strcat(path_return, "/");
+                strcat(path_return, ent->d_name);
+                break;
+            }
+        }
+        closedir(dir);
+    }
 }
 
 static void frontend_switch_get_environment_settings(int *argc, char *argv[], void *args, void *params_data)
@@ -52,7 +77,7 @@ static void frontend_switch_get_environment_settings(int *argc, char *argv[], vo
 #endif
 #endif
 
-    fill_pathname_basedir(g_defaults.dirs[DEFAULT_DIR_PORT], elf_path_cst, sizeof(g_defaults.dirs[DEFAULT_DIR_PORT]));
+    fill_pathname_basedir(g_defaults.dirs[DEFAULT_DIR_PORT], "/retroarch/retroarch_switch.nro", sizeof(g_defaults.dirs[DEFAULT_DIR_PORT]));
     RARCH_LOG("port dir: [%s]\n", g_defaults.dirs[DEFAULT_DIR_PORT]);
 
     fill_pathname_join(g_defaults.dirs[DEFAULT_DIR_CORE_ASSETS], g_defaults.dirs[DEFAULT_DIR_PORT],
@@ -102,17 +127,71 @@ static void frontend_switch_deinit(void *data)
 {
     (void)data;
 
-#ifndef IS_SALAMANDER
-    // Not sure why thats here, taken from the 3ds port
-    verbosity_enable();
-
     gfxExit();
-#endif
 }
 
 static void frontend_switch_exec(const char *path, bool should_load_game)
 {
-    // TODO
+    char game_path[PATH_MAX];
+    const char *arg_data[3];
+    char error_string[200 + PATH_MAX];
+    int args = 0;
+    int error = 0;
+
+    game_path[0] = NULL;
+    arg_data[0] = NULL;
+
+    arg_data[args] = elf_path_cst;
+    arg_data[args + 1] = NULL;
+    args++;
+
+    RARCH_LOG("Attempt to load core: [%s].\n", path);
+#ifndef IS_SALAMANDER
+    if (should_load_game && !path_is_empty(RARCH_PATH_CONTENT))
+    {
+        strcpy(game_path, path_get(RARCH_PATH_CONTENT));
+        arg_data[args] = game_path;
+        arg_data[args + 1] = NULL;
+        args++;
+        RARCH_LOG("content path: [%s].\n", path_get(RARCH_PATH_CONTENT));
+    }
+#endif
+
+    if (path && path[0])
+    {
+#ifdef IS_SALAMANDER
+        struct stat sbuff;
+        bool file_exists;
+
+        file_exists = stat(path, &sbuff) == 0;
+        if (!file_exists)
+        {
+            char core_path[PATH_MAX];
+
+            /* find first valid core and load it if the target core doesnt exist */
+            get_first_valid_core(&core_path[0]);
+
+            if (core_path[0] == '\0')
+            {
+                /*errorInit(&error_dialog, ERROR_TEXT, CFG_LANGUAGE_EN);
+                errorText(&error_dialog, "There are no cores installed, install a core to continue.");
+                errorDisp(&error_dialog);*/
+                svcExitProcess();
+            }
+        }
+#endif
+        char *argBuffer = (char *)malloc(PATH_MAX);
+        if (should_load_game)
+        {
+            snprintf(argBuffer, PATH_MAX, "%s \"%s\"", path, game_path);
+        }
+        else
+        {
+            snprintf(argBuffer, PATH_MAX, "%s", path);
+        }
+
+        envSetNextLoad(path, argBuffer);
+    }
 }
 
 #ifndef IS_SALAMANDER
@@ -172,7 +251,6 @@ static void frontend_switch_shutdown(bool unused)
 
 static void frontend_switch_init(void *data)
 {
-#ifndef IS_SALAMANDER // Do we want that here?
     (void)data;
 
     // Init Resolution before initDefault
@@ -188,12 +266,12 @@ static void frontend_switch_init(void *data)
 #if defined(SWITCH) && defined(NXLINK)
     socketInitializeDefault();
     nxlinkStdio();
+#ifndef IS_SALAMANDER
     verbosity_enable();
+#endif
 #endif
 
     printf("[Video]: Video initialized\n");
-
-#endif
 }
 
 static int frontend_switch_get_rating(void)

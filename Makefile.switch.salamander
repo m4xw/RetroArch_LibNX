@@ -9,7 +9,7 @@ endif
 TOPDIR ?= $(CURDIR)
 include $(DEVKITPRO)/libnx/switch_rules
 
-TARGET := retroarch_switch
+TARGET := retroarch-salamander_switch
 
 DEBUG                  ?= 0
 WHOLE_ARCHIVE_LINK      = 0
@@ -21,6 +21,7 @@ OBJ :=
 # make it hard for us
 DEFINES_THREAD := -Dpthread_t=Thread -Dpthread_mutex_t=Mutex -Dpthread_mutexattr_t='void*' -Dpthread_attr_t=int -Dpthread_cond_t=CondVar -Dpthread_condattr_t='int'
 DEFINES := -DSWITCH=1 -DHAVE_THREADS -DNXLINK=1 -U__linux__ -U__linux -DRARCH_INTERNAL -D_SYS__PTHREADTYPES_H_ $(DEFINES_THREAD) -DGLOBAL_CONFIG_DIR='"/switch"'
+DEFINES += -DIS_SALAMANDER -DHAVE_RARCH_EXEC
 
 HAVE_CC_RESAMPLER = 1
 HAVE_MENU_COMMON = 1
@@ -43,7 +44,26 @@ HAVE_OVERLAY = 1
 HAVE_THREADS = 1
 HAVE_PTHREADS = 1
 
-include Makefile.common
+OBJ = frontend/frontend_salamander.o \
+		frontend/frontend_driver.o \
+		frontend/drivers/platform_switch.o \
+		frontend/drivers/platform_null.o \
+		libretro-common/file/file_path.o \
+		libretro-common/hash/rhash.o \
+		libretro-common/string/stdstring.o \
+		libretro-common/lists/string_list.o \
+		libretro-common/lists/dir_list.o \
+		libretro-common/streams/file_stream.o \
+		libretro-common/vfs/vfs_implementation.o \
+		libretro-common/file/retro_dirent.o \
+		libretro-common/encodings/encoding_utf.o \
+		libretro-common/compat/compat_strl.o \
+		libretro-common/compat/compat_strcasestr.o \
+		libretro-common/file/config_file.o \
+		libretro-common/rthreads/rthreads.o \
+		file_path_str.o \
+		verbosity.o
+
 BLACKLIST :=
 #BLACKLIST += input/input_overlay.o
 #BLACKLIST += tasks/task_overlay.o
@@ -78,9 +98,9 @@ INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
 ROMFS	    :=	romfs
 
-APP_TITLE := RetroNX
+#APP_TITLE := RetroArch SNES9x libNX
 APP_ICON := icon.jpg
-APP_VERSION := 1.0
+APP_VERSION := 0.8
 APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 
 #---------------------------------------------------------------------------------
