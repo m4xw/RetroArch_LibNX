@@ -132,6 +132,9 @@ bool frontend_driver_get_core_extension(char *s, size_t len)
 #if defined(__CELLOS_LV2__)
    strlcpy(s, "self|bin", len);
    return true;
+#elif defined(SWITCH)
+   strlcpy(s, "nro", len);
+   return true;
 #elif defined(PSP)
    strlcpy(s, "pbp", len);
    return true;
@@ -177,6 +180,8 @@ bool frontend_driver_get_salamander_basename(char *s, size_t len)
    return true;
 #elif defined(PSP)
    strlcpy(s, "EBOOT.PBP", len);
+#elif defined(SWITCH)
+   strlcpy(s, "retroarch_switch.nro", len);
    return true;
 #elif defined(VITA)
    strlcpy(s, "eboot.bin", len);
