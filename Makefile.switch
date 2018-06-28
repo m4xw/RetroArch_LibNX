@@ -76,11 +76,11 @@ SOURCES		:=	$(CURDIR)/source
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
-ROMFS	    :=	romfs
+ROMFS	    :=	switch/romfs
 
 #APP_TITLE := RetroNX
-APP_ICON := icon.jpg
-APP_VERSION := 0.9.5
+APP_ICON := switch/retronx.jpg
+APP_VERSION := 0.9.6
 APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 
 #---------------------------------------------------------------------------------
