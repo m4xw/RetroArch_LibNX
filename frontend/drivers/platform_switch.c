@@ -46,7 +46,7 @@ static uint64_t frontend_switch_get_mem_used(void);
 static uint32_t *splashData = NULL;
 
 // switch_gfx.c protypes, we really need a header
-void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty);
+extern void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty);
 
 static void get_first_valid_core(char *path_return)
 {
@@ -266,7 +266,7 @@ static void frontend_switch_shutdown(bool unused)
 #endif
 }
 
-static void frontend_switch_showsplash()
+void frontend_switch_showsplash()
 {
     printf("[Splash] Showing splashScreen\n");
 
