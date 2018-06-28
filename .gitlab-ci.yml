@@ -1,5 +1,5 @@
 variables:
-  BRANCH: master
+  BRANCH: develop
 
 trigger_build:
   script:
@@ -26,4 +26,4 @@ trigger_build:
     - "curl -X POST -F token=$TOKEN_4DO -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/111/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_GPLUSGX -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/112/trigger/pipeline"
   only:
-  - master
+  - develop
