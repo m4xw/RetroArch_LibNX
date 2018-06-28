@@ -282,6 +282,10 @@ void frontend_switch_showsplash()
         gfxFlushBuffers();
         gfxSwapBuffers();
         gfxWaitForVsync();
+#if 0
+        // :shrug:
+        svcSleepThread(10000 * 100000);
+#endif
     }
 }
 
