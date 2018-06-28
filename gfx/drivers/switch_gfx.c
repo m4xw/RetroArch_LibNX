@@ -152,6 +152,10 @@ static void *switch_init(const video_info_t *video,
       sw->vp.full_width = 1280;
       sw->vp.full_height = 720;
 
+      // Sanity check
+      sw->vp.width = MIN(sw->vp.width, sw->vp.full_width);
+      sw->vp.height = MIN(sw->vp.height, sw->vp.full_height);
+
       sw->vsync = video->vsync;
       sw->rgb32 = video->rgb32;
       sw->cnt = 0;
@@ -327,6 +331,10 @@ static bool switch_frame(void *data, const void *frame,
             printf("[Video] fw: %i fh: %i w: %i h: %i x: %i y: %i\n", sw->vp.full_width, sw->vp.full_height, sw->vp.width, sw->vp.height, sw->vp.x, sw->vp.y);
             switch_update_viewport(sw, video_info);
             printf("[Video] fw: %i fh: %i w: %i h: %i x: %i y: %i\n", sw->vp.full_width, sw->vp.full_height, sw->vp.width, sw->vp.height, sw->vp.x, sw->vp.y);
+
+            // Sanity check
+            sw->vp.width = MIN(sw->vp.width, sw->vp.full_width);
+            sw->vp.height = MIN(sw->vp.height, sw->vp.full_height);
 
             scaler_ctx_gen_reset(&sw->scaler);
 

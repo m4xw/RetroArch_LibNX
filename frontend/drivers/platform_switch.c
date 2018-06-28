@@ -7,6 +7,10 @@
 #include <errno.h>
 #include <dirent.h>
 
+#include <file/nbio.h>
+#include <formats/rpng.h>
+#include <formats/image.h>
+
 #include <switch.h>
 
 #include <file/file_path.h>
@@ -37,6 +41,12 @@ static enum frontend_fork switch_fork_mode = FRONTEND_FORK_NONE;
 static const char *elf_path_cst = "/switch/retroarch_switch.nro";
 
 static uint64_t frontend_switch_get_mem_used(void);
+
+// Splash
+static uint32_t *splashData = NULL;
+
+// switch_gfx.c protypes, we really need a header
+extern void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty);
 
 static void get_first_valid_core(char *path_return)
 {
@@ -126,6 +136,13 @@ static void frontend_switch_get_environment_settings(int *argc, char *argv[], vo
 static void frontend_switch_deinit(void *data)
 {
     (void)data;
+
+    // Splash
+    if (splashData)
+    {
+        free(splashData);
+        splashData = NULL;
+    }
 
     gfxExit();
 }
@@ -249,6 +266,103 @@ static void frontend_switch_shutdown(bool unused)
 #endif
 }
 
+void frontend_switch_showsplash()
+{
+    printf("[Splash] Showing splashScreen\n");
+
+    if (splashData)
+    {
+        uint32_t width, height;
+        width = height = 0;
+
+        uint32_t *frambuffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
+
+        gfx_slow_swizzling_blit(frambuffer, splashData, width, height, 0, 0);
+
+        gfxFlushBuffers();
+        gfxSwapBuffers();
+        gfxWaitForVsync();
+    }
+}
+
+// From rpng_test.c
+static bool rpng_load_image_argb(const char *path, uint32_t **data, unsigned *width, unsigned *height)
+{
+    int retval;
+    size_t file_len;
+    bool ret = true;
+    rpng_t *rpng = NULL;
+    void *ptr = NULL;
+    struct nbio_t *handle = (struct nbio_t *)nbio_open(path, NBIO_READ);
+
+    if (!handle)
+        goto end;
+
+    nbio_begin_read(handle);
+
+    while (!nbio_iterate(handle))
+        ;
+
+    ptr = nbio_get_ptr(handle, &file_len);
+
+    if (!ptr)
+    {
+        ret = false;
+        goto end;
+    }
+
+    rpng = rpng_alloc();
+
+    if (!rpng)
+    {
+        ret = false;
+        goto end;
+    }
+
+    if (!rpng_set_buf_ptr(rpng, (uint8_t *)ptr))
+    {
+        ret = false;
+        goto end;
+    }
+
+    if (!rpng_start(rpng))
+    {
+        ret = false;
+        goto end;
+    }
+
+    while (rpng_iterate_image(rpng))
+        ;
+
+    if (!rpng_is_valid(rpng))
+    {
+        ret = false;
+        goto end;
+    }
+
+    do
+    {
+        retval = rpng_process_image(rpng, (void **)data, file_len, width, height);
+    } while (retval == IMAGE_PROCESS_NEXT);
+
+    if (retval == IMAGE_PROCESS_ERROR || retval == IMAGE_PROCESS_ERROR_END)
+        ret = false;
+
+end:
+    if (handle)
+        nbio_free(handle);
+
+    if (rpng)
+
+        rpng_free(rpng);
+
+    rpng = NULL;
+
+    if (!ret)
+        free(*data);
+    return ret;
+}
+
 static void frontend_switch_init(void *data)
 {
     (void)data;
@@ -272,6 +386,116 @@ static void frontend_switch_init(void *data)
 #endif
 
     printf("[Video]: Video initialized\n");
+
+    // RomFs
+    Result rc = romfsInit();
+    if (R_FAILED(rc))
+    {
+        printf("[RomFS]: %08X\n", rc);
+    }
+    else
+    {
+        printf("[RomFS]: RomFS initialized\n", rc);
+
+        // Load splash
+        if (!splashData)
+        {
+            uint32_t width, height;
+            width = height = 0;
+
+            // Meh, filesize got too big..
+            rpng_load_image_argb("romfs:/splash_01_720p.png", &splashData, &width, &height);
+            if (splashData)
+            {
+                // Convert
+                for (uint32_t h = 0; h < height; h++)
+                {
+                    for (uint32_t w = 0; w < width; w++)
+                    {
+                        uint32_t offset = (h * width) + w;
+                        uint32_t c = splashData[offset];
+
+                        uint32_t a = (uint32_t)((c & 0xff000000) >> 24);
+                        uint32_t r = (uint32_t)((c & 0x00ff0000) >> 16);
+                        uint32_t g = (uint32_t)((c & 0x0000ff00) >> 8);
+                        uint32_t b = (uint32_t)(c & 0x000000ff);
+
+                        splashData[offset] = RGBA8(r, g, b, a);
+                    }
+                }
+
+                frontend_switch_showsplash();
+            }
+
+#if 0
+            FILE *fsplash = fopen("romfs:/splash_01_720p.png", "r");
+            if (fsplash)
+            {
+                uint64_t fsize = 0;
+                fseek(fsplash, 0L, SEEK_END);
+                fsize = ftell(fsplash);
+                rewind(fsplash);
+
+                splashData = malloc(fsize);
+                if (splashData)
+                {
+                    // I am lazy
+                    fread(splashData, fsize, 1, fsplash);
+                    fclose(fsplash);
+                    if (splashData)
+                    {
+                        rpng_t *rpng = NULL;
+                        rpng_set_buf_ptr(rpng, splashData);
+                        rpng_start(rpng);
+                        while (rpng_iterate_image(rpng))
+                            ;
+
+                        if (!rpng_is_valid(rpng))
+                        {
+                            // Invalid image
+                            free(splashData);
+                            splashData = NULL;
+                        }
+                        else
+                        {
+                            int retval;
+                            uint32_t *tmpswap = NULL;
+
+                            do
+                            {
+                                retval = rpng_process_image(rpng, &tmpswap, fsize, 1280, 720);
+
+                                // Yield
+                                svcSleepThread(3);
+                            } while (retval == IMAGE_PROCESS_NEXT);
+
+                            rpng_free(rpng);
+                            if (tmpswap)
+                            {
+                                free(splashData);
+                                splashData = tmpswap;
+                            }
+                            frontend_switch_showsplash();
+                        }
+                    }
+                }
+                else
+                {
+                    // Uufff, no memory?
+                    // What were you doing??
+                    printf("??[Out of memory]??\n");
+                    fclose(fsplash);
+                }
+            }
+        }
+        else
+        {
+            // For future updates
+            frontend_switch_showsplash();
+        }
+#endif
+        }
+    }
 }
 
 static int frontend_switch_get_rating(void)
