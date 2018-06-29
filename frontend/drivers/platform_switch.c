@@ -144,6 +144,7 @@ static void frontend_switch_deinit(void *data)
         splashData = NULL;
     }
 
+    romfsExit();
     gfxExit();
 }
 
@@ -498,6 +499,10 @@ static void frontend_switch_init(void *data)
             frontend_switch_showsplash();
         }
 #endif
+        }
+        else
+        {
+            frontend_switch_showsplash();
         }
     }
 }
