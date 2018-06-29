@@ -272,6 +272,7 @@ enum menu_driver_enum
    MENU_MATERIALUI,
    MENU_XMB,
    MENU_NUKLEAR,
+   MENU_NXRGUI,
    MENU_NULL
 };
 
