@@ -339,7 +339,6 @@ static bool switch_frame(void *data, const void *frame,
       uint32_t *out_buffer = NULL;
       switch_video_t *sw = data;
 
-      //memset(sw->image, 0, sizeof(sw->image));
 
       if (sw->should_resize)
       {
@@ -376,6 +375,7 @@ static bool switch_frame(void *data, const void *frame,
             sw->last_height = height;
 
             sw->should_resize = false;
+            memset(sw->image, 0, sizeof(sw->image));
       }
 
       if (width > 0 && height > 0)
