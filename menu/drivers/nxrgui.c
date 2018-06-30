@@ -49,6 +49,10 @@
 #include "../../configuration.h"
 #include "../../gfx/drivers_font_renderer/bitmap.h"
 
+#define FONT_WIDTH 5
+#define FONT_HEIGHT 10
+#define FONT_WIDTH_STRIDE (FONT_WIDTH + 1)
+#define FONT_HEIGHT_STRIDE (FONT_HEIGHT + 5)
 #define nxrgui_TERM_START_X(width) (width / 21)
 #define nxrgui_TERM_START_Y(height) (height / 9)
 #define nxrgui_TERM_WIDTH(width) (((width - nxrgui_TERM_START_X(width) - nxrgui_TERM_START_X(width)) / (FONT_WIDTH_STRIDE)))
@@ -105,8 +109,10 @@ static uint16_t nxrgui_gray_filler(nxrgui_t *nxrgui, unsigned x, unsigned y)
       unsigned col = (((x >> shft) + (y >> shft)) & 1) + 1;
 #if defined(GEKKO) || defined(PSP)
       return (6 << 12) | (col << 8) | (col << 4) | (col << 0);
-#elif defined(SWITCH) // :shrug:
-      return 0;
+#elif defined(SWITCH)
+      return (((31 * (54)) / 255) << 11) |
+             (((63 * (54)) / 255) << 5) |
+             ((31 * (54)) / 255);
 #else
       return (col << 13) | (col << 9) | (col << 5) | (12 << 0);
 #endif
@@ -118,8 +124,10 @@ static uint16_t nxrgui_green_filler(nxrgui_t *nxrgui, unsigned x, unsigned y)
       unsigned col = (((x >> shft) + (y >> shft)) & 1) + 1;
 #if defined(GEKKO) || defined(PSP)
       return (6 << 12) | (col << 8) | (col << 5) | (col << 0);
-#elif defined(SWITCH) // :shrug:
-      return 0;
+#elif defined(SWITCH)
+      return (((31 * (54)) / 255) << 11) |
+             (((63 * (109)) / 255) << 5) |
+             ((31 * (54)) / 255);
 #else
       return (col << 13) | (col << 10) | (col << 5) | (12 << 0);
 #endif
