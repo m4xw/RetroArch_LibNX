@@ -54,6 +54,16 @@
 #define nxrgui_TERM_WIDTH(width) (((width - nxrgui_TERM_START_X(width) - nxrgui_TERM_START_X(width)) / (FONT_WIDTH_STRIDE)))
 #define nxrgui_TERM_HEIGHT(width, height) (((height - nxrgui_TERM_START_Y(height) - nxrgui_TERM_START_X(width)) / (FONT_HEIGHT_STRIDE)) - 1)
 
+uint32_t *nx_backgroundImage = NULL;
+static uint16_t *nx_backgroundFb = NULL;
+
+// Extern Prototypes
+bool rpng_load_image_argb(const char *path, uint32_t **data, unsigned *width, unsigned *height);
+void argb_to_rgba8(uint32_t *buff, uint32_t height, uint32_t width);
+
+// switch_gfx.c protypes, we really need a header
+void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty, bool blend);
+
 typedef struct
 {
       bool bg_modified;
@@ -95,10 +105,8 @@ static uint16_t nxrgui_gray_filler(nxrgui_t *nxrgui, unsigned x, unsigned y)
       unsigned col = (((x >> shft) + (y >> shft)) & 1) + 1;
 #if defined(GEKKO) || defined(PSP)
       return (6 << 12) | (col << 8) | (col << 4) | (col << 0);
-#elif defined(SWITCH)
-      return (((31 * (54)) / 255) << 11) |
-             (((63 * (54)) / 255) << 5) |
-             ((31 * (54)) / 255);
+#elif defined(SWITCH) // :shrug:
+      return 0;
 #else
       return (col << 13) | (col << 9) | (col << 5) | (12 << 0);
 #endif
@@ -110,28 +118,11 @@ static uint16_t nxrgui_green_filler(nxrgui_t *nxrgui, unsigned x, unsigned y)
       unsigned col = (((x >> shft) + (y >> shft)) & 1) + 1;
 #if defined(GEKKO) || defined(PSP)
       return (6 << 12) | (col << 8) | (col << 5) | (col << 0);
-#elif defined(SWITCH)
-      return (((31 * (54)) / 255) << 11) |
-             (((63 * (109)) / 255) << 5) |
-             ((31 * (54)) / 255);
+#elif defined(SWITCH) // :shrug:
+      return 0;
 #else
       return (col << 13) | (col << 10) | (col << 5) | (12 << 0);
 #endif
-}
-
-static void nxrgui_fill_rect(
-    nxrgui_t *nxrgui,
-    uint16_t *data,
-    size_t pitch,
-    unsigned x, unsigned y,
-    unsigned width, unsigned height,
-    uint16_t (*col)(nxrgui_t *nxrgui, unsigned x, unsigned y))
-{
-      unsigned i, j;
-
-      for (j = y; j < y + height; j++)
-            for (i = x; i < x + width; i++)
-                  data[j * (pitch >> 1) + i] = col(nxrgui, i, j);
 }
 
 static void nxrgui_color_rect(
@@ -260,9 +251,7 @@ static void nxrgui_render_background(nxrgui_t *nxrgui)
       uint16_t *src = NULL;
       uint16_t *dst = NULL;
 
-      menu_display_get_fb_size(&fb_width, &fb_height,
-                               &fb_pitch);
-
+      menu_display_get_fb_size(&fb_width, &fb_height, &fb_pitch);
       pitch_in_pixels = fb_pitch >> 1;
       size = fb_pitch * 4;
       src = nxrgui_framebuf_data + pitch_in_pixels * fb_height;
@@ -270,23 +259,13 @@ static void nxrgui_render_background(nxrgui_t *nxrgui)
 
       while (dst < src)
       {
-            memcpy(dst, src, size);
+            memset(dst, 0, size);
             dst += pitch_in_pixels * 4;
       }
 
       if (nxrgui_framebuf_data)
       {
             settings_t *settings = config_get_ptr();
-
-            if (settings->bools.menu_rgui_border_filler_enable)
-            {
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data, fb_pitch, 5, 5, fb_width - 10, 5, nxrgui_green_filler);
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data, fb_pitch, 5, fb_height - 10, fb_width - 10, 5, nxrgui_green_filler);
-
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data, fb_pitch, 5, 5, 5, fb_height - 10, nxrgui_green_filler);
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data, fb_pitch, fb_width - 10, 5, 5, fb_height - 10,
-                                 nxrgui_green_filler);
-            }
       }
 }
 
@@ -353,28 +332,6 @@ static void nxrgui_render_messagebox(nxrgui_t *nxrgui, const char *message)
       height = (unsigned)(FONT_HEIGHT_STRIDE * list->size + 6 + 10);
       x = (fb_width - width) / 2;
       y = (fb_height - height) / 2;
-
-      if (nxrgui_framebuf_data)
-      {
-            nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data,
-                           fb_pitch, x + 5, y + 5, width - 10,
-                           height - 10, nxrgui_gray_filler);
-
-            if (settings->bools.menu_rgui_border_filler_enable)
-            {
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data,
-                                 fb_pitch, x, y, width - 5, 5, nxrgui_green_filler);
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data,
-                                 fb_pitch, x + width - 5, y, 5,
-                                 height - 5, nxrgui_green_filler);
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data,
-                                 fb_pitch, x + 5, y + height - 5,
-                                 width - 5, 5, nxrgui_green_filler);
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data,
-                                 fb_pitch, x, y + 5, 5,
-                                 height - 5, nxrgui_green_filler);
-            }
-      }
 
       color = NORMAL_COLOR(settings);
 
@@ -455,16 +412,11 @@ static void nxrgui_render(void *data, bool is_idle)
                   return;
       }
 
-      menu_display_get_fb_size(&fb_width, &fb_height,
-                               &fb_pitch);
+      menu_display_get_fb_size(&fb_width, &fb_height, &fb_pitch);
 
       /* if the framebuffer changed size, recache the background */
       if (nxrgui->bg_modified || nxrgui->last_width != fb_width || nxrgui->last_height != fb_height)
       {
-            if (nxrgui_framebuf_data)
-                  nxrgui_fill_rect(nxrgui, nxrgui_framebuf_data,
-                                 fb_pitch, 0, fb_height, fb_width, 4, nxrgui_gray_filler);
-            nxrgui->last_width = fb_width;
             nxrgui->last_height = fb_height;
       }
 
@@ -728,14 +680,15 @@ static void *nxrgui_init(void **userdata, bool video_is_threaded)
       *userdata = nxrgui;
 
       /* 4 extra lines to cache  the checked background */
-      nxrgui_framebuf_data = (uint16_t *)
-          calloc(400 * (240 + 4), sizeof(uint16_t));
+      nxrgui_framebuf_data = (uint16_t *)calloc(400 * (240 + 4), sizeof(uint16_t));
 
       if (!nxrgui_framebuf_data)
             goto error;
 
+
       fb_width = 320;
       fb_height = 240;
+      
       fb_pitch = fb_width * sizeof(uint16_t);
       new_font_height = FONT_HEIGHT_STRIDE * 2;
 
@@ -758,6 +711,24 @@ static void *nxrgui_init(void **userdata, bool video_is_threaded)
 
       nxrgui->last_width = fb_width;
       nxrgui->last_height = fb_height;
+
+      // Load PNG Data
+      printf("[UI] Loading..\n");
+
+      uint32_t width, height;
+      width = height = 0;
+
+      rpng_load_image_argb("romfs:/menu_bg_blank.png", &nx_backgroundImage, &width, &height);
+      if (nx_backgroundImage)
+      {
+            // Convert
+            argb_to_rgba8(nx_backgroundImage, height, width);
+            printf("[NxRGUI] Menu loaded\n");
+      }
+      else
+      {
+            nx_backgroundFb = nx_backgroundImage = NULL;
+      }
 
       return menu;
 
@@ -862,14 +833,14 @@ static void nxrgui_navigation_ascend_alphabet(void *data, size_t *unused)
 }
 
 static void nxrgui_populate_entries(void *data,
-                                  const char *path,
-                                  const char *label, unsigned k)
+                                    const char *path,
+                                    const char *label, unsigned k)
 {
       nxrgui_navigation_set(data, true);
 }
 
 static int nxrgui_environ(enum menu_environ_cb type,
-                        void *data, void *userdata)
+                          void *data, void *userdata)
 {
       nxrgui_t *nxrgui = (nxrgui_t *)userdata;
 
@@ -896,9 +867,9 @@ static int nxrgui_environ(enum menu_environ_cb type,
 }
 
 static int nxrgui_pointer_tap(void *data,
-                            unsigned x, unsigned y,
-                            unsigned ptr, menu_file_list_cbs_t *cbs,
-                            menu_entry_t *entry, unsigned action)
+                              unsigned x, unsigned y,
+                              unsigned ptr, menu_file_list_cbs_t *cbs,
+                              menu_entry_t *entry, unsigned action)
 {
       unsigned header_height = menu_display_get_header_height();
 

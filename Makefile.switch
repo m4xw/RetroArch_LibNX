@@ -28,7 +28,7 @@ HAVE_RTGA = 1
 HAVE_RPNG = 1
 HAVE_RJPEG = 1
 HAVE_RBMP = 1
-HAVE_RGUI = 1
+HAVE_RGUI = 0
 HAVE_NXRGUI = 1
 HAVE_ZLIB = 1
 HAVE_BUILTINZLIB = 1
@@ -87,9 +87,9 @@ APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
+ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE 
 
-CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
+CFLAGS	:=	-g -Wall -O3 -ffunction-sections \
 			$(ARCH) $(DEFINES) -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(LIBNX)/include -include $(LIBNX)/include/switch.h
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__

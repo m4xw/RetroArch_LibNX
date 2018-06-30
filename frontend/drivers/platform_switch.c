@@ -46,7 +46,7 @@ static uint64_t frontend_switch_get_mem_used(void);
 static uint32_t *splashData = NULL;
 
 // switch_gfx.c protypes, we really need a header
-extern void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty);
+extern void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty, bool blend);
 
 static void get_first_valid_core(char *path_return)
 {
@@ -267,6 +267,26 @@ static void frontend_switch_shutdown(bool unused)
 #endif
 }
 
+void argb_to_rgba8(uint32_t *buff, uint32_t height, uint32_t width)
+{
+    // Convert
+    for (uint32_t h = 0; h < height; h++)
+    {
+        for (uint32_t w = 0; w < width; w++)
+        {
+            uint32_t offset = (h * width) + w;
+            uint32_t c = buff[offset];
+
+            uint32_t a = (uint32_t)((c & 0xff000000) >> 24);
+            uint32_t r = (uint32_t)((c & 0x00ff0000) >> 16);
+            uint32_t g = (uint32_t)((c & 0x0000ff00) >> 8);
+            uint32_t b = (uint32_t)(c & 0x000000ff);
+
+            buff[offset] = RGBA8(r, g, b, a);
+        }
+    }
+}
+
 void frontend_switch_showsplash()
 {
     printf("[Splash] Showing splashScreen\n");
@@ -278,7 +298,7 @@ void frontend_switch_showsplash()
 
         uint32_t *frambuffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
 
-        gfx_slow_swizzling_blit(frambuffer, splashData, width, height, 0, 0);
+        gfx_slow_swizzling_blit(frambuffer, splashData, width, height, 0, 0, false);
 
         gfxFlushBuffers();
         gfxSwapBuffers();
@@ -291,13 +311,14 @@ void frontend_switch_showsplash()
 }
 
 // From rpng_test.c
-static bool rpng_load_image_argb(const char *path, uint32_t **data, unsigned *width, unsigned *height)
+bool rpng_load_image_argb(const char *path, uint32_t **data, unsigned *width, unsigned *height)
 {
     int retval;
     size_t file_len;
     bool ret = true;
     rpng_t *rpng = NULL;
     void *ptr = NULL;
+
     struct nbio_t *handle = (struct nbio_t *)nbio_open(path, NBIO_READ);
 
     if (!handle)
@@ -306,7 +327,7 @@ static bool rpng_load_image_argb(const char *path, uint32_t **data, unsigned *wi
     nbio_begin_read(handle);
 
     while (!nbio_iterate(handle))
-        ;
+        svcSleepThread(3);
 
     ptr = nbio_get_ptr(handle, &file_len);
 
@@ -337,7 +358,7 @@ static bool rpng_load_image_argb(const char *path, uint32_t **data, unsigned *wi
     }
 
     while (rpng_iterate_image(rpng))
-        ;
+        svcSleepThread(3);
 
     if (!rpng_is_valid(rpng))
     {
@@ -348,6 +369,7 @@ static bool rpng_load_image_argb(const char *path, uint32_t **data, unsigned *wi
     do
     {
         retval = rpng_process_image(rpng, (void **)data, file_len, width, height);
+        svcSleepThread(3);
     } while (retval == IMAGE_PROCESS_NEXT);
 
     if (retval == IMAGE_PROCESS_ERROR || retval == IMAGE_PROCESS_ERROR_END)
@@ -358,13 +380,13 @@ end:
         nbio_free(handle);
 
     if (rpng)
-
         rpng_free(rpng);
 
     rpng = NULL;
 
     if (!ret)
         free(*data);
+
     return ret;
 }
 
@@ -412,23 +434,7 @@ static void frontend_switch_init(void *data)
             rpng_load_image_argb("romfs:/splash_01_720p.png", &splashData, &width, &height);
             if (splashData)
             {
-                // Convert
-                for (uint32_t h = 0; h < height; h++)
-                {
-                    for (uint32_t w = 0; w < width; w++)
-                    {
-                        uint32_t offset = (h * width) + w;
-                        uint32_t c = splashData[offset];
-
-                        uint32_t a = (uint32_t)((c & 0xff000000) >> 24);
-                        uint32_t r = (uint32_t)((c & 0x00ff0000) >> 16);
-                        uint32_t g = (uint32_t)((c & 0x0000ff00) >> 8);
-                        uint32_t b = (uint32_t)(c & 0x000000ff);
-
-                        splashData[offset] = RGBA8(r, g, b, a);
-                    }
-                }
-
+                argb_to_rgba8(splashData, height, width);
                 frontend_switch_showsplash();
             }
 
