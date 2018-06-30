@@ -110,18 +110,26 @@ void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, in
 
 typedef struct
 {
-      bool vsync;
-      bool rgb32;
-      unsigned width, height;
-      unsigned rotation;
       struct video_viewport vp;
+      struct scaler_ctx scaler;
+      bool vsync;
+      bool should_resize;
+
+      uint32_t image[1280 * 720];
+
       struct texture_image *overlay;
+      unsigned rotation;
+      uint32_t last_width;
+      uint32_t last_height;
+      uint32_t o_height;
+      uint32_t o_width;
+      bool o_size;
+      bool keep_aspect;
       bool overlay_enabled;
+      bool rgb32;
+
       struct
       {
-            bool enable;
-            bool fullscreen;
-
             uint32_t *pixels;
 
             uint32_t width;
@@ -131,20 +139,10 @@ typedef struct
             unsigned tgth;
 
             struct scaler_ctx scaler;
+
+            bool enable;
+            bool fullscreen;
       } menu_texture;
-
-      uint32_t image[1280 * 720];
-      u32 cnt;
-      struct scaler_ctx scaler;
-      uint32_t last_width;
-      uint32_t last_height;
-      bool keep_aspect;
-      bool should_resize;
-      bool need_clear;
-
-      bool o_size;
-      uint32_t o_height;
-      uint32_t o_width;
 } switch_video_t;
 
 static void *switch_init(const video_info_t *video,
@@ -164,7 +162,6 @@ static void *switch_init(const video_info_t *video,
       sw->vp.height = sw->o_height = video->height;
       sw->overlay_enabled = false;
       sw->overlay = NULL;
-      sw->need_clear = true;
 
       sw->vp.full_width = 1280;
       sw->vp.full_height = 720;
@@ -175,7 +172,6 @@ static void *switch_init(const video_info_t *video,
 
       sw->vsync = video->vsync;
       sw->rgb32 = video->rgb32;
-      sw->cnt = 0;
       sw->keep_aspect = true;
       sw->should_resize = true;
       sw->o_size = true;
@@ -562,8 +558,6 @@ static void switch_set_texture_frame(
                   return;
             }
       }
-
-      sw->need_clear = true;
 
       memcpy(sw->menu_texture.pixels, frame, width * height * (rgb32 ? 4 : 2));
 }
