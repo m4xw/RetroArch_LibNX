@@ -243,7 +243,7 @@ static void *switch_audio_init(const char *device,
       // Create Buffers
       for (int i = 0; i < 5; i++)
       {
-            swa->buffers[i].next = NULL;
+            swa->buffers[i].next = NULL; // Unused
             swa->buffers[i].buffer = memalign(0x1000, switch_audio_buffer_size(NULL));
             swa->buffers[i].buffer_size = switch_audio_buffer_size(NULL);
             swa->buffers[i].data_size = switch_audio_data_size();
