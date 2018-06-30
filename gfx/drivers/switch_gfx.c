@@ -140,6 +140,7 @@ typedef struct
       uint32_t last_height;
       bool keep_aspect;
       bool should_resize;
+      bool need_clear;
 
       bool o_size;
       uint32_t o_height;
@@ -163,6 +164,7 @@ static void *switch_init(const video_info_t *video,
       sw->vp.height = sw->o_height = video->height;
       sw->overlay_enabled = false;
       sw->overlay = NULL;
+      sw->need_clear = true;
 
       sw->vp.full_width = 1280;
       sw->vp.full_height = 720;
@@ -331,10 +333,7 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      if (!appletMainLoop())
-            return false;
-
-      static uint64_t last_frame = 0;
+      //static uint64_t last_frame = 0;
 
       unsigned x, y;
       uint32_t *out_buffer = NULL;
@@ -433,7 +432,7 @@ static bool switch_frame(void *data, const void *frame,
       if (sw->vsync)
             switch_wait_vsync(sw);
 
-      last_frame = svcGetSystemTick();
+      //last_frame = svcGetSystemTick();
 
       return true;
 }
@@ -563,6 +562,8 @@ static void switch_set_texture_frame(
                   return;
             }
       }
+
+      sw->need_clear = true;
 
       memcpy(sw->menu_texture.pixels, frame, width * height * (rgb32 ? 4 : 2));
 }

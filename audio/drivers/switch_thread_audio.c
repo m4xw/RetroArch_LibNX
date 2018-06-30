@@ -27,35 +27,24 @@
 
 #include "../../tasks/tasks_internal.h"
 
-// TODO: mr !34
-#if 0
-#define LOG(fmt, ...) printf(fmt, ##__VA_ARGS__)
-#else
-#define LOG(fmt, ...)
-#endif
-
-#define YIELD_NS 3
 #define THREAD_STACK_SIZE (1024 * 8)
 
-// TODO: mr !34
 #define AUDIO_THREAD_PRIO 0x2D
 #define AUDIO_THREAD_CPU 2
 
-#define SAMPLE_RATE 48000
 #define CHANNELCOUNT 2
 #define BYTESPERSAMPLE sizeof(uint16_t)
 #define SAMPLE_SIZE (CHANNELCOUNT * BYTESPERSAMPLE)
 
 #define AUDIO_BUFFER_COUNT 4
 
-// TODO: maybe do that as a general function?
-static void switch_thread_yield()
+static inline void switch_thread_yield()
 {
-      svcSleepThread(YIELD_NS);
+      // found 3ns to be lowest value that didn't lock things up
+      svcSleepThread(3);
 }
 
-// TODO: not threaded_audio specific
-static void lockMutex(Mutex* mtx)
+static inline void lockMutex(Mutex* mtx)
 {
       while (!mutexTryLock(mtx))
             switch_thread_yield();
@@ -63,44 +52,33 @@ static void lockMutex(Mutex* mtx)
 
 typedef struct
 {
-      AudioOutBuffer buffer[AUDIO_BUFFER_COUNT];
-
       fifo_buffer_t* fifo;
       Mutex fifoLock;
       Thread thread;
 
-      size_t fifoSize;
-      unsigned latency;
-      uint32_t sampleRate;
       volatile bool running;
       bool nonblocking;
       bool is_paused;
+
+      AudioOutBuffer buffer[AUDIO_BUFFER_COUNT];
+
+      size_t fifoSize;
+      unsigned latency;
+      uint32_t sampleRate;
 } switch_thread_audio_t;
 
 static void mainLoop(void* data)
 {
       switch_thread_audio_t* swa = (switch_thread_audio_t*)data;
-      LOG("[Audio]: start mainLoop cpu %u tid %u\n", svcGetCurrentProcessorNumber(), swa->thread.handle);
 
-      Result rc = audoutInitialize();
-      if (R_FAILED(rc))
-      {
-            LOG("[Audio]: audio init failed\n");
-            swa->running = false;
-      }
+      if (!swa)
+            return;
 
-      rc = audoutStartAudioOut();
-      if (R_FAILED(rc))
-      {
-            LOG("[Audio]: audio start init failed\n");
-            swa->running = false;
-      }
+      RARCH_LOG("[Audio]: start mainLoop cpu %u tid %u\n", svcGetCurrentProcessorNumber(), swa->thread.handle);
 
       for (int i = 0; i < AUDIO_BUFFER_COUNT; i++)
       {
-            // Unused
-            swa->buffer[i].next = NULL;
-
+            swa->buffer[i].next = NULL; // Unused
             swa->buffer[i].buffer_size = swa->fifoSize;
             swa->buffer[i].buffer = memalign(0x1000, swa->buffer[i].buffer_size);
             swa->buffer[i].data_size = swa->buffer[i].buffer_size;
@@ -112,6 +90,7 @@ static void mainLoop(void* data)
 
       AudioOutBuffer* released_out_buffer = NULL;
       u32 released_out_count;
+      Result rc;
 
       while (swa->running)
       {
@@ -122,7 +101,7 @@ static void mainLoop(void* data)
                   if (R_FAILED(rc))
                   {
                         swa->running = false;
-                        LOG("[Audio]: audoutGetReleasedAudioOutBuffer failed: %d\n", (int)rc);
+                        RARCH_LOG("[Audio]: audoutGetReleasedAudioOutBuffer failed: %d\n", (int)rc);
                         break;
                   }
                   else if (released_out_count > 0)
@@ -155,8 +134,9 @@ static void mainLoop(void* data)
                   {
                         released_out_buffer->data_size += to_write;
                         rc = audoutAppendAudioOutBuffer(released_out_buffer);
-                        if (R_FAILED(rc)){
-                              LOG("[Audio]: audoutAppendAudioOutBuffer failed: %d\n", (int)rc);
+                        if (R_FAILED(rc))
+                        {
+                              RARCH_LOG("[Audio]: audoutAppendAudioOutBuffer failed: %d\n", (int)rc);
                         }
                         released_out_buffer = NULL;
                   }
@@ -173,41 +153,49 @@ static void *switch_thread_audio_init(const char *device, unsigned rate, unsigne
       if (!swa)
             return NULL;
 
-      // TODO: mr !34
-      if (latency < 8)
-            latency = 8;
-
-      swa->latency = latency;
-      swa->nonblocking = true;
       swa->running = true;
+      swa->nonblocking = true;
       swa->is_paused = true;
+      swa->latency = MAX(latency, 8);
 
-      // TODO: mr !34
+      Result rc = audoutInitialize();
+      if (R_FAILED(rc))
+      {
+            RARCH_LOG("[Audio]: audio init failed %d\n", (int)rc);
+            return NULL;
+      }
+
+      rc = audoutStartAudioOut();
+      if (R_FAILED(rc))
+      {
+            RARCH_LOG("[Audio]: audio start init failed: %d\n", (int)rc);
+            return NULL;
+      }
+
       swa->sampleRate = audoutGetSampleRate();
-      if (swa->sampleRate == 0)
-            swa->sampleRate = SAMPLE_RATE;
       *new_rate = swa->sampleRate;
 
       mutexInit(&swa->fifoLock);
       swa->fifoSize = (swa->sampleRate * SAMPLE_SIZE * swa->latency) / 1000;
       swa->fifo = fifo_new(swa->fifoSize);
 
-      LOG("[Audio]: switch_thread_audio_init device %s requested rate %hu rate %hu latency %hu block_frames %hu fifoSize %lu\n",
+      RARCH_LOG("[Audio]: switch_thread_audio_init device %s requested rate %hu rate %hu latency %hu block_frames %hu fifoSize %lu\n",
                   device, rate, swa->sampleRate, swa->latency, block_frames, swa->fifoSize);
 
-      int rc = threadCreate(&swa->thread, &mainLoop, (void*)swa,
-                  THREAD_STACK_SIZE, AUDIO_THREAD_PRIO, AUDIO_THREAD_CPU);
+      u32 prio;
+      svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
+      rc = threadCreate(&swa->thread, &mainLoop, (void*)swa, THREAD_STACK_SIZE, prio - 1, AUDIO_THREAD_CPU);
 
       if (R_FAILED(rc))
       {
-            LOG("[Audio]: thread creation failed create %u\n", swa->thread.handle);
+            RARCH_LOG("[Audio]: thread creation failed create %u\n", swa->thread.handle);
             swa->running = false;
             return NULL;
       }
 
       if (R_FAILED(threadStart(&swa->thread)))
       {
-            LOG("[Audio]: thread creation failed start %u\n", swa->thread.handle);
+            RARCH_LOG("[Audio]: thread creation failed start %u\n", swa->thread.handle);
             threadClose(&swa->thread);
             swa->running = false;
             return NULL;
@@ -218,7 +206,7 @@ static void *switch_thread_audio_init(const char *device, unsigned rate, unsigne
 
 static bool switch_thread_audio_start(void *data, bool is_shutdown)
 {
-      LOG("[Audio]: switch_thread_audio_start\n");
+      RARCH_LOG("[Audio]: switch_thread_audio_start\n");
       switch_thread_audio_t *swa = (switch_thread_audio_t *)data;
 
       if (!swa)
@@ -230,7 +218,7 @@ static bool switch_thread_audio_start(void *data, bool is_shutdown)
 
 static bool switch_thread_audio_stop(void *data)
 {
-      LOG("[Audio]: switch_thread_audio_stop\n");
+      RARCH_LOG("[Audio]: switch_thread_audio_stop\n");
       switch_thread_audio_t* swa = (switch_thread_audio_t*)data;
 
       if (!swa)
@@ -242,7 +230,7 @@ static bool switch_thread_audio_stop(void *data)
 
 static void switch_thread_audio_free(void *data)
 {
-      LOG("[Audio]: switch_thread_audio_free\n");
+      RARCH_LOG("[Audio]: switch_thread_audio_free\n");
       switch_thread_audio_t *swa = (switch_thread_audio_t *)data;
 
       if (!swa)
@@ -323,7 +311,7 @@ static bool switch_thread_audio_alive(void *data)
 
 static void switch_thread_audio_set_nonblock_state(void *data, bool state)
 {
-      LOG("[Audio]: switch_thread_audio_set_nonblock_state state %d\n", (int)state);
+      RARCH_LOG("[Audio]: switch_thread_audio_set_nonblock_state state %d\n", (int)state);
       switch_thread_audio_t *swa = (switch_thread_audio_t *)data;
 
       if (swa)
@@ -334,6 +322,27 @@ static bool switch_thread_audio_use_float(void *data)
 {
       (void)data;
       return false;
+}
+
+static size_t switch_thread_audio_write_avail(void *data)
+{
+      switch_thread_audio_t* swa = (switch_thread_audio_t*)data;
+
+      lockMutex(&swa->fifoLock);
+      size_t val = fifo_write_avail(swa->fifo);
+      mutexUnlock(&swa->fifoLock);
+
+      return val;
+}
+
+size_t switch_thread_audio_buffer_size(void *data)
+{
+      switch_thread_audio_t *swa = (switch_thread_audio_t *)data;
+
+      if (!swa)
+            return 0;
+
+      return swa->fifoSize;
 }
 
 audio_driver_t audio_switch_thread = {
@@ -348,7 +357,7 @@ audio_driver_t audio_switch_thread = {
       "switch_thread",
       NULL, // device_list_new
       NULL, // device_list_free
-      NULL, // switch_thread_audio_write_avail,
+      NULL, // switch_thread_audio_write_avail
       NULL, // switch_thread_audio_buffer_size
 };
 
