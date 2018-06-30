@@ -773,6 +773,12 @@ ifeq ($(HAVE_XMB), 1)
    HAVE_MENU_COMMON = 1
 endif
 
+ifeq ($(HAVE_NXRGUI), 1)
+   OBJ += menu/drivers/nxrgui.o
+   DEFINES += -DHAVE_NXRGUI
+   HAVE_MENU_COMMON = 1
+endif
+
 ifeq ($(HAVE_LAKKA), 1)
    DEFINES += -DHAVE_LAKKA
 endif

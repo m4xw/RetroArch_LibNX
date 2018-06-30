@@ -88,6 +88,9 @@ static const menu_ctx_driver_t *menu_ctx_drivers[] = {
 #if defined(HAVE_RGUI)
    &menu_ctx_rgui,
 #endif
+#if defined(HAVE_NXRGUI)
+   &menu_ctx_nxrgui,
+#endif
 #if defined(HAVE_ZARCH)
    &menu_ctx_zarch,
 #endif

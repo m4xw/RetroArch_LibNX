@@ -1222,6 +1222,10 @@ MENU
 #include "../menu/drivers/rgui.c"
 #endif
 
+#ifdef HAVE_NXRGUI
+#include "../menu/drivers/nxrgui.c"
+#endif
+
 #if defined(HAVE_OPENGL) || defined(HAVE_VITA2D) || defined(_3DS) || defined(_MSC_VER) || defined(__wiiu__)
 #ifdef HAVE_XMB
 #include "../menu/drivers/xmb.c"
