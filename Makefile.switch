@@ -77,7 +77,7 @@ SOURCES		:=	$(CURDIR)/source
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
-ROMFS	    :=	switch/romfs
+#ROMFS	    :=	switch/romfs
 
 #APP_TITLE := RetroNX
 APP_ICON := switch/retronx.jpg

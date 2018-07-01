@@ -137,6 +137,10 @@ static void frontend_switch_deinit(void *data)
 {
     (void)data;
 
+#if defined(SWITCH) && defined(NXLINK)
+    socketExit();
+#endif
+
     // Splash
     if (splashData)
     {
@@ -144,7 +148,8 @@ static void frontend_switch_deinit(void *data)
         splashData = NULL;
     }
 
-    romfsExit();
+    //romfsExit();
+
     gfxExit();
 }
 
@@ -262,9 +267,6 @@ static void frontend_switch_exitspawn(char *s, size_t len)
 static void frontend_switch_shutdown(bool unused)
 {
     (void)unused;
-#if defined(SWITCH) && defined(NXLINK)
-    socketExit();
-#endif
 }
 
 void argb_to_rgba8(uint32_t *buff, uint32_t height, uint32_t width)
@@ -415,7 +417,7 @@ static void frontend_switch_init(void *data)
     printf("[Video]: Video initialized\n");
 
     // RomFs
-    Result rc = romfsInit();
+    /*Result rc = romfsInit();
     if (R_FAILED(rc))
     {
         printf("[RomFS]: %08X\n", rc);
@@ -423,20 +425,20 @@ static void frontend_switch_init(void *data)
     else
     {
         printf("[RomFS]: RomFS initialized\n", rc);
+    */
+    // Load splash
+    if (!splashData)
+    {
+        uint32_t width, height;
+        width = height = 0;
 
-        // Load splash
-        if (!splashData)
+        // Meh, filesize got too big..
+        rpng_load_image_argb("/retroarch/splash_01_720p.png", &splashData, &width, &height);
+        if (splashData)
         {
-            uint32_t width, height;
-            width = height = 0;
-
-            // Meh, filesize got too big..
-            rpng_load_image_argb("romfs:/splash_01_720p.png", &splashData, &width, &height);
-            if (splashData)
-            {
-                argb_to_rgba8(splashData, height, width);
-                frontend_switch_showsplash();
-            }
+            argb_to_rgba8(splashData, height, width);
+            frontend_switch_showsplash();
+        }
 
 #if 0
             FILE *fsplash = fopen("romfs:/splash_01_720p.png", "r");
@@ -505,12 +507,12 @@ static void frontend_switch_init(void *data)
             frontend_switch_showsplash();
         }
 #endif
-        }
-        else
-        {
-            frontend_switch_showsplash();
-        }
     }
+    else
+    {
+        frontend_switch_showsplash();
+    }
+    //}
 }
 
 static int frontend_switch_get_rating(void)

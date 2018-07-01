@@ -726,7 +726,7 @@ static void *nxrgui_init(void **userdata, bool video_is_threaded)
       uint32_t width, height;
       width = height = 0;
 
-      rpng_load_image_argb("romfs:/menu_bg_blank.png", &nx_backgroundImage, &width, &height);
+      rpng_load_image_argb("/retroarch/menu_bg_blank.png", &nx_backgroundImage, &width, &height);
       if (nx_backgroundImage)
       {
             // Convert
