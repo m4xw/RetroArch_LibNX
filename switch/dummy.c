@@ -55,8 +55,8 @@ void retro_get_system_info(
       struct retro_system_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->library_name     = "";
-   info->library_version  = "";
+   info->library_name     = "RetroNX";
+   info->library_version  = "0.9.6"; // Ver
    info->need_fullpath    = false;
    info->valid_extensions = ""; /* Nothing. */
 }
