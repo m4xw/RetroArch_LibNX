@@ -34,6 +34,8 @@
 #endif
 
 extern uint32_t *nx_backgroundImage;
+// Temp Overlay // KILL IT WITH FIRE
+extern uint32_t *tmp_overlay;
 
 // (C) libtransistor
 static int pdep(uint32_t mask, uint32_t value)
@@ -418,6 +420,10 @@ static bool switch_frame(void *data, const void *frame,
       else
       {
             gfx_slow_swizzling_blit(out_buffer, sw->image, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
+            if (tmp_overlay)
+            {
+                  gfx_slow_swizzling_blit(out_buffer, tmp_overlay, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
+            }
       }
 
       gfxFlushBuffers();

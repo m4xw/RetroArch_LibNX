@@ -33,6 +33,8 @@
 #include <string/stdstring.h>
 #include <encodings/utf.h>
 
+#include "../../retroarch.h"
+
 #ifdef HAVE_CONFIG_H
 #include "../../config.h"
 #endif
@@ -67,6 +69,9 @@ void argb_to_rgba8(uint32_t *buff, uint32_t height, uint32_t width);
 
 // switch_gfx.c protypes, we really need a header
 void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty, bool blend);
+
+// Temporary Overlay Buffer
+uint32_t *tmp_overlay = 0;
 
 typedef struct
 {
@@ -693,10 +698,9 @@ static void *nxrgui_init(void **userdata, bool video_is_threaded)
       if (!nxrgui_framebuf_data)
             goto error;
 
-
       fb_width = 320;
       fb_height = 240;
-      
+
       fb_pitch = fb_width * sizeof(uint16_t);
       new_font_height = FONT_HEIGHT_STRIDE * 2;
 
@@ -738,6 +742,37 @@ static void *nxrgui_init(void **userdata, bool video_is_threaded)
             nx_backgroundFb = nx_backgroundImage = NULL;
       }
 
+      // Temp overlay hack
+      // TODO: KILL IT WITH FIRE
+      // At least i try to give it some options, since loading the cfg's doesnt work with threading
+      rarch_system_info_t *sys_info = runloop_get_system_info();
+      const char *core_name = NULL;
+
+      if (sys_info)
+      {
+            core_name = sys_info->info.library_name;
+            printf("[Overlay] Load Overlay for Core: \"%s\"\n", core_name);
+            char* full_overlaypath = (char*)malloc(PATH_MAX);
+            snprintf(full_overlaypath, PATH_MAX, "/retroarch/overlays/%s.png", core_name);
+            rpng_load_image_argb(full_overlaypath, &tmp_overlay, &width, &height);
+            if (tmp_overlay)
+            {
+                  // Convert
+                  argb_to_rgba8(tmp_overlay, height, width);
+                  printf("[Overlay] Overlay loaded\n");
+            }
+            else
+            {
+                  printf("[Overlay] Overlay failed to load\n");
+                  tmp_overlay = NULL;
+            }
+            free(full_overlaypath);
+      }
+      else
+      {
+            tmp_overlay = NULL;
+      }
+
       return menu;
 
 error:
@@ -760,6 +795,19 @@ static void nxrgui_free(void *data)
 
       fb_font_inited = false;
       menu_display_set_font_data_init(fb_font_inited);
+
+      if (nx_backgroundImage)
+      {
+            free(nx_backgroundImage);
+            nx_backgroundImage = NULL;
+      }
+
+      // Temp Overlay hack
+      if (tmp_overlay)
+      {
+            free(tmp_overlay);
+            tmp_overlay = NULL;
+      }
 }
 
 static void nxrgui_set_texture(void)
