@@ -161,7 +161,6 @@ static INLINE int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
     while (!mutexTryLock(mutex))
         svcSleepThread(3);
-
     return 0;
 }
 

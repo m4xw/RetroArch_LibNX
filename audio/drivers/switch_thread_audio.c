@@ -12,7 +12,6 @@
  *  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// WIP audio_threaded, look TODO's
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
@@ -29,40 +28,36 @@
 
 #define THREAD_STACK_SIZE (1024 * 8)
 
-#define AUDIO_THREAD_PRIO 0x2D
 #define AUDIO_THREAD_CPU 2
 
 #define CHANNELCOUNT 2
 #define BYTESPERSAMPLE sizeof(uint16_t)
 #define SAMPLE_SIZE (CHANNELCOUNT * BYTESPERSAMPLE)
 
-#define AUDIO_BUFFER_COUNT 4
-
-static inline void switch_thread_yield()
-{
-      // found 3ns to be lowest value that didn't lock things up
-      svcSleepThread(3);
-}
+#define AUDIO_BUFFER_COUNT 2
 
 static inline void lockMutex(Mutex* mtx)
 {
       while (!mutexTryLock(mtx))
-            switch_thread_yield();
+            svcSleepThread(3);
 }
 
 typedef struct
 {
       fifo_buffer_t* fifo;
       Mutex fifoLock;
-      Thread thread;
+      CondVar cond;
+      Mutex condLock;
+
+      size_t fifoSize;
 
       volatile bool running;
       bool nonblocking;
       bool is_paused;
 
       AudioOutBuffer buffer[AUDIO_BUFFER_COUNT];
+      Thread thread;
 
-      size_t fifoSize;
       unsigned latency;
       uint32_t sampleRate;
 } switch_thread_audio_t;
@@ -96,50 +91,41 @@ static void mainLoop(void* data)
       {
             if (!released_out_buffer)
             {
-                  rc = audoutGetReleasedAudioOutBuffer(&released_out_buffer, &released_out_count);
-
+                  rc = audoutWaitPlayFinish(&released_out_buffer, &released_out_count, U64_MAX);
                   if (R_FAILED(rc))
                   {
                         swa->running = false;
                         RARCH_LOG("[Audio]: audoutGetReleasedAudioOutBuffer failed: %d\n", (int)rc);
                         break;
                   }
-                  else if (released_out_count > 0)
-                  {
-                        released_out_buffer->data_size = 0;
-                  }
-                  else
-                  {
-                        released_out_buffer = NULL;
-                        switch_thread_yield();
-                  }
+                  released_out_buffer->data_size = 0;
             }
 
-            if (released_out_buffer)
+            size_t bufAvail = released_out_buffer->buffer_size - released_out_buffer->data_size;
+
+            lockMutex(&swa->fifoLock);
+
+            size_t avail = fifo_read_avail(swa->fifo);
+            size_t to_write = MIN(avail, bufAvail);
+            if (to_write > 0)
+                  fifo_read(swa->fifo, ((u8*)released_out_buffer->buffer) + released_out_buffer->data_size, to_write);
+
+            mutexUnlock(&swa->fifoLock);
+            condvarWakeAll(&swa->cond);
+
+            released_out_buffer->data_size += to_write;
+            if (released_out_buffer->data_size >= released_out_buffer->buffer_size / 2)
             {
-                  size_t avail;
-                  size_t to_write;
-                  size_t bufAvail = released_out_buffer->buffer_size - released_out_buffer->data_size;
-
-                  lockMutex(&swa->fifoLock);
-
-                  avail = fifo_read_avail(swa->fifo);
-                  to_write = MIN(avail, bufAvail);
-                  if (to_write > 0)
-                        fifo_read(swa->fifo, ((u8*)released_out_buffer->buffer) + released_out_buffer->data_size, to_write);
-
-                  mutexUnlock(&swa->fifoLock);
-
-                  if (to_write > 0)
+                  rc = audoutAppendAudioOutBuffer(released_out_buffer);
+                  if (R_FAILED(rc))
                   {
-                        released_out_buffer->data_size += to_write;
-                        rc = audoutAppendAudioOutBuffer(released_out_buffer);
-                        if (R_FAILED(rc))
-                        {
-                              RARCH_LOG("[Audio]: audoutAppendAudioOutBuffer failed: %d\n", (int)rc);
-                        }
-                        released_out_buffer = NULL;
+                        RARCH_LOG("[Audio]: audoutAppendAudioOutBuffer failed: %d\n", (int)rc);
                   }
+                  released_out_buffer = NULL;
+            }
+            else
+            {
+                  svcSleepThread(16000000); // 16ms
             }
       }
 }
@@ -179,12 +165,14 @@ static void *switch_thread_audio_init(const char *device, unsigned rate, unsigne
       swa->fifoSize = (swa->sampleRate * SAMPLE_SIZE * swa->latency) / 1000;
       swa->fifo = fifo_new(swa->fifoSize);
 
+      condvarInit(&swa->cond, &swa->condLock);
+
       RARCH_LOG("[Audio]: switch_thread_audio_init device %s requested rate %hu rate %hu latency %hu block_frames %hu fifoSize %lu\n",
                   device, rate, swa->sampleRate, swa->latency, block_frames, swa->fifoSize);
 
       u32 prio;
       svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
-      rc = threadCreate(&swa->thread, &mainLoop, (void*)swa, THREAD_STACK_SIZE, prio - 1, AUDIO_THREAD_CPU);
+      rc = threadCreate(&swa->thread, &mainLoop, (void*)swa, THREAD_STACK_SIZE, prio + 1, AUDIO_THREAD_CPU);
 
       if (R_FAILED(rc))
       {
@@ -259,7 +247,6 @@ static void switch_thread_audio_free(void *data)
       swa = NULL;
 }
 
-// TODO: mr !34
 static ssize_t switch_thread_audio_write(void *data, const void *buf, size_t size)
 {
       switch_thread_audio_t *swa = (switch_thread_audio_t *)data;
@@ -276,7 +263,9 @@ static ssize_t switch_thread_audio_write(void *data, const void *buf, size_t siz
             avail = fifo_write_avail(swa->fifo);
             written = MIN(avail, size);
             if (written > 0)
+            {
                   fifo_write(swa->fifo, buf, written);
+            }
             mutexUnlock(&swa->fifoLock);
       }
       else
@@ -286,13 +275,21 @@ static ssize_t switch_thread_audio_write(void *data, const void *buf, size_t siz
             {
                   lockMutex(&swa->fifoLock);
                   avail = fifo_write_avail(swa->fifo);
-                  size_t write_amt = MIN(size - written, avail);
-                  if (write_amt > 0)
+                  if (avail == 0)
                   {
+                        mutexUnlock(&swa->fifoLock);
+                        lockMutex(&swa->condLock);
+                        if (swa->running)
+                              condvarWait(&swa->cond);
+                        mutexUnlock(&swa->condLock);
+                  }
+                  else
+                  {
+                        size_t write_amt = MIN(size - written, avail);
                         fifo_write(swa->fifo, (const char*)buf + written, write_amt);
+                        mutexUnlock(&swa->fifoLock);
                         written += write_amt;
                   }
-                  mutexUnlock(&swa->fifoLock);
             }
       }
 
@@ -357,8 +354,8 @@ audio_driver_t audio_switch_thread = {
       "switch_thread",
       NULL, // device_list_new
       NULL, // device_list_free
-      NULL, // switch_thread_audio_write_avail
-      NULL, // switch_thread_audio_buffer_size
+      switch_thread_audio_write_avail,
+      switch_thread_audio_buffer_size
 };
 
 /* vim: set ts=6 sw=6 sts=6: */
