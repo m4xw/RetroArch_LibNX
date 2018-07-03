@@ -90,7 +90,7 @@ APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 #---------------------------------------------------------------------------------
 ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE 
 
-CFLAGS	:=	-g -Wall -O3 -ffunction-sections \
+CFLAGS	:=	-g -Wall -O3 -ffast-math -ffunction-sections \
 			$(ARCH) $(DEFINES) -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(LIBNX)/include -include $(LIBNX)/include/switch.h
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__
