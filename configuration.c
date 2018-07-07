@@ -272,6 +272,7 @@ enum menu_driver_enum
    MENU_MATERIALUI,
    MENU_XMB,
    MENU_NUKLEAR,
+   MENU_NXRGUI,
    MENU_NULL
 };
 
@@ -506,6 +507,8 @@ static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_MATERIALUI;
 static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_XMB;
 #elif defined(HAVE_RGUI)
 static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_RGUI;
+#elif defined(HAVE_NXRGUI)
+static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_NXRGUI;
 #else
 static enum menu_driver_enum MENU_DEFAULT_DRIVER = MENU_NULL;
 #endif
@@ -989,6 +992,8 @@ const char *config_get_default_menu(void)
    {
       case MENU_RGUI:
          return "rgui";
+      case MENU_NXRGUI:
+         return "nxrgui";
       case MENU_XUI:
          return "xui";
       case MENU_MATERIALUI:

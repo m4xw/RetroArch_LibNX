@@ -33,6 +33,10 @@
 #include "../../tasks/tasks_internal.h"
 #endif
 
+extern uint32_t *nx_backgroundImage;
+// Temp Overlay // KILL IT WITH FIRE
+extern uint32_t *tmp_overlay;
+
 // (C) libtransistor
 static int pdep(uint32_t mask, uint32_t value)
 {
@@ -53,7 +57,7 @@ static int pdep(uint32_t mask, uint32_t value)
 static uint32_t swizzle_x(uint32_t v) { return pdep(~0x7B4u, v); }
 static uint32_t swizzle_y(uint32_t v) { return pdep(0x7B4, v); }
 
-void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty)
+void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, int tx, int ty, bool blend)
 {
       uint32_t *dest = buffer;
       uint32_t *src = image;
@@ -83,6 +87,21 @@ void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, in
             for (x = x0; x < x1; x++)
             {
                   uint32_t pixel = *src++;
+                  if (blend) // supercheap masking
+                  {
+                        uint32_t dst = dest_line[offs_x];
+                        uint8_t src_a = ((pixel & 0xFF000000) >> 24);
+
+                        if (src_a > 0)
+                        {
+                              pixel &= 0x00FFFFFF;
+                        }
+                        else
+                        {
+                              pixel = dst;
+                        }
+                  }
+
                   dest_line[offs_x] = pixel;
                   offs_x = (offs_x - x_mask) & x_mask;
             }
@@ -95,18 +114,27 @@ void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, in
 
 typedef struct
 {
-      bool vsync;
-      bool rgb32;
-      unsigned width, height;
-      unsigned rotation;
       struct video_viewport vp;
+      struct scaler_ctx scaler;
+      bool vsync;
+      bool should_resize;
+
+      uint32_t image[1280 * 720];
+      uint32_t tmp_image[1280 * 720];
+
       struct texture_image *overlay;
+      unsigned rotation;
+      uint32_t last_width;
+      uint32_t last_height;
+      uint32_t o_height;
+      uint32_t o_width;
+      bool o_size;
+      bool keep_aspect;
       bool overlay_enabled;
+      bool rgb32;
+
       struct
       {
-            bool enable;
-            bool fullscreen;
-
             uint32_t *pixels;
 
             uint32_t width;
@@ -116,19 +144,10 @@ typedef struct
             unsigned tgth;
 
             struct scaler_ctx scaler;
+
+            bool enable;
+            bool fullscreen;
       } menu_texture;
-
-      uint32_t image[1280 * 720];
-      u32 cnt;
-      struct scaler_ctx scaler;
-      uint32_t last_width;
-      uint32_t last_height;
-      bool keep_aspect;
-      bool should_resize;
-
-      bool o_size;
-      uint32_t o_height;
-      uint32_t o_width;
 } switch_video_t;
 
 static void *switch_init(const video_info_t *video,
@@ -158,7 +177,6 @@ static void *switch_init(const video_info_t *video,
 
       sw->vsync = video->vsync;
       sw->rgb32 = video->rgb32;
-      sw->cnt = 0;
       sw->keep_aspect = true;
       sw->should_resize = true;
       sw->o_size = true;
@@ -316,10 +334,7 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      if (!appletMainLoop())
-            return false;
-
-      static uint64_t last_frame = 0;
+      //static uint64_t last_frame = 0;
 
       unsigned x, y;
       uint32_t *out_buffer = NULL;
@@ -360,24 +375,7 @@ static bool switch_frame(void *data, const void *frame,
             sw->last_height = height;
 
             sw->should_resize = false;
-      }
-
-      // Very simple, no overhead (we loop through them anyway!)
-      // TODO: memcpy?? duh.
-      if (sw->overlay_enabled && sw->overlay != NULL)
-      {
-            for (y = 0; y < sw->vp.full_height; y++)
-            {
-                  for (x = 0; x < sw->vp.full_width; x++)
-                  {
-                        sw->image[y * sw->vp.full_width + x] = sw->overlay->pixels[y * sw->vp.full_width + x];
-                  }
-            }
-      }
-      else
-      {
-            // uint32_t image[1280 * 720];
-            memset(&sw->image, 0, sizeof(sw->image));
+            memset(sw->image, 0, sizeof(sw->image));
       }
 
       if (width > 0 && height > 0)
@@ -387,11 +385,12 @@ static bool switch_frame(void *data, const void *frame,
 
       if (sw->menu_texture.enable)
       {
+            memset(sw->tmp_image, 0, sizeof(sw->tmp_image));
             menu_driver_frame(video_info);
 
             if (sw->menu_texture.pixels)
             {
-                  scaler_ctx_scale(&sw->menu_texture.scaler, sw->image + ((sw->vp.full_height - sw->menu_texture.tgth) / 2) * sw->vp.full_width + ((sw->vp.full_width - sw->menu_texture.tgtw) / 2), sw->menu_texture.pixels);
+                  scaler_ctx_scale(&sw->menu_texture.scaler, sw->tmp_image + ((sw->vp.full_height - sw->menu_texture.tgth) / 2) * sw->vp.full_width + ((sw->vp.full_width - sw->menu_texture.tgtw) / 2), sw->menu_texture.pixels);
             }
       }
       else if (video_info->statistics_show)
@@ -412,22 +411,27 @@ static bool switch_frame(void *data, const void *frame,
       height = 0;
 
       out_buffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
-      if (sw->cnt == 60)
+
+      if (sw->menu_texture.enable && sw->menu_texture.pixels)
       {
-            sw->cnt = 0;
+            gfx_slow_swizzling_blit(out_buffer, nx_backgroundImage, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
+            gfx_slow_swizzling_blit(out_buffer, sw->tmp_image, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
       }
       else
       {
-            sw->cnt++;
+            gfx_slow_swizzling_blit(out_buffer, sw->image, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
+            if (tmp_overlay)
+            {
+                  gfx_slow_swizzling_blit(out_buffer, tmp_overlay, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
+            }
       }
 
-      gfx_slow_swizzling_blit(out_buffer, sw->image, sw->vp.full_width, sw->vp.full_height, 0, 0);
       gfxFlushBuffers();
       gfxSwapBuffers();
       if (sw->vsync)
             switch_wait_vsync(sw);
 
-      last_frame = svcGetSystemTick();
+      //last_frame = svcGetSystemTick();
 
       return true;
 }
@@ -544,7 +548,6 @@ static void switch_set_texture_frame(
             sctx->in_height = height;
             sctx->in_stride = width * (rgb32 ? 4 : 2);
             sctx->in_fmt = rgb32 ? SCALER_FMT_ARGB8888 : SCALER_FMT_RGB565;
-
             sctx->out_width = sw->menu_texture.tgtw;
             sctx->out_height = sw->menu_texture.tgth;
             sctx->out_stride = 1280 * 4;

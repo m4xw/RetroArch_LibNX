@@ -249,7 +249,12 @@ void conv_rgb565_argb8888(void *output_, const void *input_,
          g            = (g << 2) | (g >> 4);
          b            = (b << 3) | (b >> 2);
 
+// Transparent RGUI hack
+#ifdef HAVE_NXRGUI
+         output[w]    = ((r > 0 ? 0xffu : 0) << 24) | (r << 16) | (g << 8) | (b << 0);
+#else
          output[w]    = (0xffu << 24) | (r << 16) | (g << 8) | (b << 0);
+#endif
       }
    }
 }

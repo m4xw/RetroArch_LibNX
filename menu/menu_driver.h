@@ -816,6 +816,7 @@ extern menu_display_ctx_driver_t menu_display_ctx_null;
 
 extern menu_ctx_driver_t menu_ctx_xui;
 extern menu_ctx_driver_t menu_ctx_rgui;
+extern menu_ctx_driver_t menu_ctx_nxrgui;
 extern menu_ctx_driver_t menu_ctx_mui;
 extern menu_ctx_driver_t menu_ctx_nuklear;
 extern menu_ctx_driver_t menu_ctx_xmb;

@@ -28,7 +28,8 @@ HAVE_RTGA = 1
 HAVE_RPNG = 1
 HAVE_RJPEG = 1
 HAVE_RBMP = 1
-HAVE_RGUI = 1
+HAVE_RGUI = 0
+HAVE_NXRGUI = 1
 HAVE_ZLIB = 1
 HAVE_BUILTINZLIB = 1
 HAVE_LIBRETRODB = 1
@@ -42,6 +43,7 @@ HAVE_RUNAHEAD = 1
 HAVE_OVERLAY = 1
 HAVE_THREADS = 1
 HAVE_PTHREADS = 1
+HAVE_DUMMY = 0
 
 include Makefile.common
 BLACKLIST :=
@@ -76,19 +78,19 @@ SOURCES		:=	$(CURDIR)/source
 DATA		:=	data
 INCLUDES	:=	include
 EXEFS_SRC	:=	exefs_src
-ROMFS	    :=	switch/romfs
+#ROMFS	    :=	switch/romfs
 
 #APP_TITLE := RetroNX
 APP_ICON := switch/retronx.jpg
-APP_VERSION := 0.9.6
+APP_VERSION := 0.9.7
 APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
-ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE
+ARCH	:=	-march=armv8-a -mtune=cortex-a57 -mtp=soft -fPIE 
 
-CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
+CFLAGS	:=	-g -Wall -O3 -ffast-math -ffunction-sections \
 			$(ARCH) $(DEFINES) -Ideps -Ideps/libz -Ilibretro-common/include -Ideps/stb -I$(LIBNX)/include -include $(LIBNX)/include/switch.h
 
 CFLAGS	+=	$(INCLUDE) -D__SWITCH__

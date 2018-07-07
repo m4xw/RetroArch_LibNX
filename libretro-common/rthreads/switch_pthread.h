@@ -159,7 +159,9 @@ static INLINE int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 static INLINE int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-    return mutexTryLock(mutex) ? 0 : 1;
+    while (!mutexTryLock(mutex))
+        svcSleepThread(3);
+    return 0;
 }
 
 static INLINE int pthread_mutex_unlock(pthread_mutex_t *mutex)
