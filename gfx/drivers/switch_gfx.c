@@ -132,6 +132,7 @@ typedef struct
       bool keep_aspect;
       bool overlay_enabled;
       bool rgb32;
+      bool is_threaded;
 
       struct
       {
@@ -160,7 +161,7 @@ static void *switch_init(const video_info_t *video,
       if (!sw)
             return NULL;
 
-      printf("loading switch gfx driver, width: %d, height: %d\n", video->width, video->height);
+      printf("loading switch gfx driver, width: %d, height: %d threaded: %d\n", video->width, video->height, video->is_threaded);
       sw->vp.x = 0;
       sw->vp.y = 0;
       sw->vp.width = sw->o_width = video->width;
@@ -180,6 +181,7 @@ static void *switch_init(const video_info_t *video,
       sw->keep_aspect = true;
       sw->should_resize = true;
       sw->o_size = true;
+      sw->is_threaded = video->is_threaded;
 
       // Autoselect driver
       if (input && input_data)
@@ -339,6 +341,14 @@ static bool switch_frame(void *data, const void *frame,
       unsigned x, y;
       uint32_t *out_buffer = NULL;
       switch_video_t *sw = data;
+      bool ffwd_mode = video_info->input_driver_nonblock_state;
+
+      if (ffwd_mode && !sw->is_threaded)
+      {
+          // render every 4th frame when in ffwd mode and not threaded
+          if ((frame_count % 4) != 0)
+              return true;
+      }
 
       if (sw->should_resize)
       {
