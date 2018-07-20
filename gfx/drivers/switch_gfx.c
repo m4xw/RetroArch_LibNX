@@ -29,6 +29,8 @@
 #include "../../retroarch.h"
 #include "../../verbosity.h"
 
+#include "../common/switch_common.h"
+
 #ifndef HAVE_THREADS
 #include "../../tasks/tasks_internal.h"
 #endif
@@ -103,6 +105,7 @@ void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, in
                   }
 
                   dest_line[offs_x] = pixel;
+                  
                   offs_x = (offs_x - x_mask) & x_mask;
             }
 
@@ -111,45 +114,6 @@ void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, in
                   offs_x0 += incr_y; // wrap into next tile row
       }
 }
-
-typedef struct
-{
-      struct video_viewport vp;
-      struct scaler_ctx scaler;
-      bool vsync;
-      bool should_resize;
-
-      uint32_t image[1280 * 720];
-      uint32_t tmp_image[1280 * 720];
-
-      struct texture_image *overlay;
-      unsigned rotation;
-      uint32_t last_width;
-      uint32_t last_height;
-      uint32_t o_height;
-      uint32_t o_width;
-      bool o_size;
-      bool keep_aspect;
-      bool overlay_enabled;
-      bool rgb32;
-      bool is_threaded;
-
-      struct
-      {
-            uint32_t *pixels;
-
-            uint32_t width;
-            uint32_t height;
-
-            unsigned tgtw;
-            unsigned tgth;
-
-            struct scaler_ctx scaler;
-
-            bool enable;
-            bool fullscreen;
-      } menu_texture;
-} switch_video_t;
 
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
@@ -191,6 +155,10 @@ static void *switch_init(const video_info_t *video,
             *input = switchinput ? &input_switch : NULL;
             *input_data = switchinput;
       }
+
+      font_driver_init_osd(sw, false,
+         video->is_threaded,
+         FONT_DRIVER_RENDER_SWITCH);
 
       return sw;
 }
@@ -414,9 +382,6 @@ static bool switch_frame(void *data, const void *frame,
             }
       }
 
-      //if (msg && strlen(msg) > 0)
-      //      printf("message: %s\n", msg);
-
       width = 0;
       height = 0;
 
@@ -435,6 +400,9 @@ static bool switch_frame(void *data, const void *frame,
                   gfx_slow_swizzling_blit(out_buffer, tmp_overlay, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
             }
       }
+
+      if (msg)
+            font_driver_render_msg(video_info, NULL, msg, NULL);
 
       gfxFlushBuffers();
       gfxSwapBuffers();
@@ -587,6 +555,17 @@ static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
       sw->menu_texture.fullscreen = full_screen;
 }
 
+static void switch_set_osd_msg(void *data,
+      video_frame_info_t *video_info,
+      const char *msg,
+      const void *params, void *font)
+{
+   switch_video_t* sw = (switch_video_t*)data;
+
+   if (sw)
+      font_driver_render_msg(video_info, font, msg, params);
+}
+
 #ifdef HAVE_OVERLAY
 static void switch_overlay_enable(void *data, bool state)
 {
@@ -684,7 +663,7 @@ static const video_poke_interface_t switch_poke_interface = {
     switch_apply_state_changes, /* apply_state_changes */
     switch_set_texture_frame,
     switch_set_texture_enable,
-    NULL, /* set_osd_msg */
+    switch_set_osd_msg,
     NULL, /* show_mouse */
     NULL, /* grab_mouse_toggle */
     NULL, /* get_current_shader */

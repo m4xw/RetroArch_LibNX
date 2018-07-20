@@ -139,6 +139,9 @@ static menu_display_ctx_driver_t *menu_display_ctx_drivers[] = {
 #ifdef DJGPP
    &menu_display_ctx_vga,
 #endif
+#if defined(SWITCH)
+   &menu_display_ctx_switch,
+#endif
    &menu_display_ctx_null,
    NULL,
 };
@@ -305,6 +308,10 @@ static bool menu_display_check_compatibility(
          break;
       case MENU_VIDEO_DRIVER_VGA:
          if (string_is_equal(video_driver, "vga"))
+            return true;
+         break;
+      case MENU_VIDEO_DRIVER_SWITCH:
+         if (string_is_equal(video_driver, "switch"))
             return true;
          break;
    }

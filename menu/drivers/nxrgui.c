@@ -85,6 +85,8 @@ typedef struct
       bool border_thickness;
       float scroll_y;
       char *msgbox;
+      
+      font_data_t* font;
 } nxrgui_t;
 
 static uint16_t *nxrgui_framebuf_data = NULL;
@@ -387,10 +389,17 @@ static void nxrgui_frame(void *data, video_frame_info_t *video_info)
       if ((settings->bools.menu_rgui_background_filler_thickness_enable != nxrgui->bg_thickness) ||
           (settings->bools.menu_rgui_border_filler_thickness_enable != nxrgui->border_thickness))
             nxrgui->bg_modified = true;
+            
+      unsigned fbWidth;
+      unsigned fbHeight;
+
+      uint32_t* fb = (uint32_t*) gfxGetFramebuffer(&fbWidth, &fbHeight);
 
       nxrgui->bg_thickness = settings->bools.menu_rgui_background_filler_thickness_enable;
       nxrgui->border_thickness = settings->bools.menu_rgui_border_filler_thickness_enable;
-
+      
+      //menu_display_draw_text(nxrgui->font, "Hello from freetype2!", 0, 0, fbWidth, fbHeight, 0xFFFFFFFF, TEXT_ALIGN_LEFT, 1.0f, false, 0);
+      
       nxrgui->frame_count++;
 }
 
@@ -691,6 +700,9 @@ static void *nxrgui_init(void **userdata, bool video_is_threaded)
             goto error;
 
       *userdata = nxrgui;
+      
+      if (!menu_display_init_first_driver(video_is_threaded))
+            goto error;
 
       /* 4 extra lines to cache  the checked background */
       nxrgui_framebuf_data = (uint16_t *)calloc(400 * (240 + 4), sizeof(uint16_t));
@@ -948,6 +960,30 @@ static int nxrgui_pointer_tap(void *data,
       return 0;
 }
 
+static void nxrgui_context_reset(void *data, bool is_threaded)
+{
+    nxrgui_t* nxrgui = (nxrgui_t*) data;
+    
+    if (!nxrgui)
+        return;
+    
+    nxrgui->font = menu_display_font(APPLICATION_SPECIAL_DIRECTORY_ASSETS_NXRGUI_FONT, 24, is_threaded);
+    
+    if (!nxrgui->font)
+        printf("[NxRGUI] Unable to load font\n");
+}
+
+static void nxrgui_context_destroy(void *data)
+{
+    nxrgui_t* nxrgui = (nxrgui_t*) data;
+    
+    if (!nxrgui)
+        return;
+        
+    if (nxrgui->font)
+        menu_display_font_free(nxrgui->font);
+}
+
 menu_ctx_driver_t menu_ctx_nxrgui = {
     nxrgui_set_texture,
     nxrgui_set_message,
@@ -956,8 +992,8 @@ menu_ctx_driver_t menu_ctx_nxrgui = {
     nxrgui_frame,
     nxrgui_init,
     nxrgui_free,
-    NULL,
-    NULL,
+    nxrgui_context_reset,
+    nxrgui_context_destroy,
     nxrgui_populate_entries,
     NULL,
     nxrgui_navigation_clear,
