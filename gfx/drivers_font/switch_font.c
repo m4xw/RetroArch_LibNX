@@ -104,81 +104,95 @@ static void switch_font_render_line(
       int delta_x = 0;
       int delta_y = 0;
 
-      unsigned fbWidth;
-      unsigned fbHeight;
+      unsigned fbWidth = 0;
+      unsigned fbHeight = 0;
 
       uint32_t *out_buffer = (uint32_t *)gfxGetFramebuffer(&fbWidth, &fbHeight);
-
-      int x = roundf(pos_x * fbWidth);
-      int y = roundf((1.0f - pos_y) * fbHeight);
-
-      switch (text_align)
+      if (out_buffer)
       {
-      case TEXT_ALIGN_RIGHT:
-            x -= switch_font_get_message_width(font, msg, msg_len, scale);
-            break;
-      case TEXT_ALIGN_CENTER:
-            x -= switch_font_get_message_width(font, msg, msg_len, scale) / 2.0;
-            break;
-      }
+            int x = roundf(pos_x * fbWidth);
+            int y = roundf((1.0f - pos_y) * fbHeight);
 
-      for (int i = 0; i < msg_len; i++)
-      {
-            int off_x, off_y, tex_x, tex_y, width, height;
-            const char *msg_tmp = &msg[i];
-            unsigned code = utf8_walk(&msg_tmp);
-            unsigned skip = msg_tmp - &msg[i];
-
-            if (skip > 1)
-                  i += skip - 1;
-
-            const struct font_glyph *glyph =
-                font->font_driver->get_glyph(font->font_data, code);
-
-            if (!glyph) /* Do something smarter here ... */
-                  glyph = font->font_driver->get_glyph(font->font_data, '?');
-
-            if (!glyph)
-                  continue;
-
-            off_x = glyph->draw_offset_x * FONT_SCALE;
-            off_y = glyph->draw_offset_y * FONT_SCALE;
-            width = glyph->width;
-            height = glyph->height;
-
-            tex_x = glyph->atlas_offset_x;
-            tex_y = glyph->atlas_offset_y;
-
-            uint32_t *glyph_buffer = malloc((width * FONT_SCALE) * (height * FONT_SCALE) * sizeof(uint32_t)); //TODO Replace this by a large-enough buffer depending on FONT_SCALE
-
-            for (int y = tex_y; y < tex_y + height; y++)
+            switch (text_align)
             {
-                  uint8_t *row = &font->atlas->buffer[y * font->atlas->width];
-                  for (int x = tex_x; x < tex_x + width; x++)
+            case TEXT_ALIGN_RIGHT:
+                  x -= switch_font_get_message_width(font, msg, msg_len, scale);
+                  break;
+            case TEXT_ALIGN_CENTER:
+                  x -= switch_font_get_message_width(font, msg, msg_len, scale) / 2.0;
+                  break;
+            }
+
+            for (int i = 0; i < msg_len; i++)
+            {
+                  int off_x, off_y, tex_x, tex_y, width, height;
+                  const char *msg_tmp = &msg[i];
+                  unsigned code = utf8_walk(&msg_tmp);
+                  unsigned skip = msg_tmp - &msg[i];
+
+                  if (skip > 1)
+                        i += skip - 1;
+
+                  const struct font_glyph *glyph =
+                      font->font_driver->get_glyph(font->font_data, code);
+
+                  if (!glyph) /* Do something smarter here ... */
+                        glyph = font->font_driver->get_glyph(font->font_data, '?');
+
+                  if (!glyph)
+                        continue;
+
+                  off_x = glyph->draw_offset_x * FONT_SCALE;
+                  off_y = glyph->draw_offset_y * FONT_SCALE;
+                  width = glyph->width;
+                  height = glyph->height;
+
+                  tex_x = glyph->atlas_offset_x;
+                  tex_y = glyph->atlas_offset_y;
+
+                  uint32_t *glyph_buffer = malloc((width * FONT_SCALE) * (height * FONT_SCALE) * sizeof(uint32_t)); //TODO Replace this by a large-enough buffer depending on FONT_SCALE
+
+                  for (int y = tex_y; y < tex_y + height; y++)
                   {
-                        uint8_t alpha = row[x];
-                        uint32_t pixel = RGBA8(0, 255, 0, alpha);
-                        for (int i = 0; i < FONT_SCALE; i++)
+                        uint8_t *row = &font->atlas->buffer[y * font->atlas->width];
+                        for (int x = tex_x; x < tex_x + width; x++)
                         {
-                              for (int j = 0; j < FONT_SCALE; j++)
+                              uint8_t alpha = row[x];
+                              uint32_t pixel = RGBA8(0, 255, 0, alpha);
+                              for (int i = 0; i < FONT_SCALE; i++)
                               {
-                                    int px = (x - tex_x) * FONT_SCALE + j;
-                                    int py = (y - tex_y) * FONT_SCALE + i;
-                                    glyph_buffer[py * (width * FONT_SCALE) + px] = pixel;
+                                    for (int j = 0; j < FONT_SCALE; j++)
+                                    {
+                                          int px = (x - tex_x) * FONT_SCALE + j;
+                                          int py = (y - tex_y) * FONT_SCALE + i;
+                                          glyph_buffer[py * (width * FONT_SCALE) + px] = pixel;
+                                    }
                               }
                         }
                   }
+
+                  int glyphx = x + off_x + delta_x * FONT_SCALE + FONT_SCALE * 2;
+                  int glyphy = y + off_y + delta_y * FONT_SCALE - FONT_SCALE * 2;
+
+                  // Safeguard
+                  if ((glyphx + width * FONT_SCALE) > 1280)
+                  {
+                        printf("glpyhx violated %i\n", (glyphx + width * FONT_SCALE));
+                  }
+                  else if ((glyphy + height * FONT_SCALE) > 720)
+                  {
+                        printf("glyphy violated %i\n", (glyphy + height * FONT_SCALE));
+                  }
+                  else
+                  {
+                        gfx_slow_swizzling_blit(out_buffer, glyph_buffer, width * FONT_SCALE, height * FONT_SCALE, glyphx, glyphy, true);
+                  }
+
+                  free(glyph_buffer);
+
+                  delta_x += glyph->advance_x;
+                  delta_y += glyph->advance_y;
             }
-
-            int glyphx = x + off_x + delta_x * FONT_SCALE + FONT_SCALE * 2;
-            int glyphy = y + off_y + delta_y * FONT_SCALE - FONT_SCALE * 2;
-
-            gfx_slow_swizzling_blit(out_buffer, glyph_buffer, width * FONT_SCALE, height * FONT_SCALE, glyphx, glyphy, true);
-
-            free(glyph_buffer);
-
-            delta_x += glyph->advance_x;
-            delta_y += glyph->advance_y;
       }
 }
 

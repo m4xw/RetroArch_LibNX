@@ -398,7 +398,7 @@ static void nxrgui_frame(void *data, video_frame_info_t *video_info)
       nxrgui->bg_thickness = settings->bools.menu_rgui_background_filler_thickness_enable;
       nxrgui->border_thickness = settings->bools.menu_rgui_border_filler_thickness_enable;
       
-      //menu_display_draw_text(nxrgui->font, "Hello from freetype2!", 0, 0, fbWidth, fbHeight, 0xFFFFFFFF, TEXT_ALIGN_LEFT, 1.0f, false, 0);
+      //menu_display_draw_text(nxrgui->font, "Hello from freetype2!", 23, 23, fbWidth, fbHeight, 0xFFFFFFFF, TEXT_ALIGN_LEFT, 1.0f, false, 0);
       
       nxrgui->frame_count++;
 }
