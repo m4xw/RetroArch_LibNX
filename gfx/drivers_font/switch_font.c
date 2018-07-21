@@ -180,12 +180,12 @@ static void switch_font_render_line(
                   if ((glyphx + width * FONT_SCALE) > 1280)
                   {
                         x_ok = false;
-                        printf("glpyhx %i (x: %i, off_x: %i, delta_x: %i), violated calc: %i, width: %i\n", glyphx, x, off_x, delta_x, (glyphx + width * FONT_SCALE), width);
+                        //printf("glpyhx %i (x: %i, off_x: %i, delta_x: %i), violated calc: %i, width: %i\n", glyphx, x, off_x, delta_x, (glyphx + width * FONT_SCALE), width);
                   }
                   if ((glyphy + height * FONT_SCALE) > 720)
                   {
                         y_ok = false;
-                        printf("glyphy %i (y: %i, off_y: %i, delta_y: %i) , violated %i, glyphy: %i, heigth: %i\n", glyphy, y, off_y, delta_y, (glyphy + height * FONT_SCALE), glyphy, height);
+                        //printf("glyphy %i (y: %i, off_y: %i, delta_y: %i) , violated %i, glyphy: %i, heigth: %i\n", glyphy, y, off_y, delta_y, (glyphy + height * FONT_SCALE), glyphy, height);
                   }
 #endif
                   if (x_ok && y_ok)
@@ -201,6 +201,7 @@ static void switch_font_render_line(
       }
 }
 
+#define AVG_GLPYH_LIMIT 140
 static void switch_font_render_message(
     video_frame_info_t *video_info,
     switch_font_t *font, const char *msg, float scale,
@@ -216,8 +217,12 @@ static void switch_font_render_message(
       /* If the font height is not supported just draw as usual */
       if (!font->font_driver->get_line_height)
       {
-            switch_font_render_line(video_info, font, msg, strlen(msg),
-                                    scale, color, pos_x, pos_y, text_align);
+            int msgLen = strlen(msg);
+            if (msgLen <= AVG_GLPYH_LIMIT)
+            {
+                  switch_font_render_line(video_info, font, msg, strlen(msg),
+                                          scale, color, pos_x, pos_y, text_align);
+            }
             return;
       }
       line_height = scale / font->font_driver->get_line_height(font->font_data);
@@ -230,18 +235,24 @@ static void switch_font_render_message(
             if (delim)
             {
                   unsigned msg_len = delim - msg;
-                  switch_font_render_line(video_info, font, msg, msg_len,
-                                          scale, color, pos_x, pos_y - (float)lines * line_height,
-                                          text_align);
+                  if (msg_len <= AVG_GLPYH_LIMIT)
+                  {
+                        switch_font_render_line(video_info, font, msg, msg_len,
+                                                scale, color, pos_x, pos_y - (float)lines * line_height,
+                                                text_align);
+                  }
                   msg += msg_len + 1;
                   lines++;
             }
             else
             {
                   unsigned msg_len = strlen(msg);
-                  switch_font_render_line(video_info, font, msg, msg_len,
-                                          scale, color, pos_x, pos_y - (float)lines * line_height,
-                                          text_align);
+                  if (msg_len <= AVG_GLPYH_LIMIT)
+                  {
+                        switch_font_render_line(video_info, font, msg, msg_len,
+                                                scale, color, pos_x, pos_y - (float)lines * line_height,
+                                                text_align);
+                  }
                   break;
             }
       }
@@ -303,9 +314,6 @@ static void switch_font_render_msg(
       }
 
       max_glyphs = strlen(msg);
-      // Garbage data on threading :shrug:
-      if (max_glyphs > 140)
-            return; // This is max length on 5 avg width
 
       /*if (drop_x || drop_y)
       max_glyphs    *= 2;
