@@ -174,19 +174,24 @@ static void switch_font_render_line(
                   int glyphx = x + off_x + delta_x * FONT_SCALE + FONT_SCALE * 2;
                   int glyphy = y + off_y + delta_y * FONT_SCALE - FONT_SCALE * 2;
 
-                  // Safeguard
+                  // Gonna try to catch it prior
+#if 0
+                  bool x_ok = true, y_ok = true;
                   if ((glyphx + width * FONT_SCALE) > 1280)
                   {
-                        printf("glpyhx violated %i\n", (glyphx + width * FONT_SCALE));
+                        x_ok = false;
+                        printf("glpyhx %i (x: %i, off_x: %i, delta_x: %i), violated calc: %i, width: %i\n", glyphx, x, off_x, delta_x, (glyphx + width * FONT_SCALE), width);
                   }
-                  else if ((glyphy + height * FONT_SCALE) > 720)
+                  if ((glyphy + height * FONT_SCALE) > 720)
                   {
-                        printf("glyphy violated %i\n", (glyphy + height * FONT_SCALE));
+                        y_ok = false;
+                        printf("glyphy %i (y: %i, off_y: %i, delta_y: %i) , violated %i, glyphy: %i, heigth: %i\n", glyphy, y, off_y, delta_y, (glyphy + height * FONT_SCALE), glyphy, height);
                   }
-                  else
-                  {
-                        gfx_slow_swizzling_blit(out_buffer, glyph_buffer, width * FONT_SCALE, height * FONT_SCALE, glyphx, glyphy, true);
-                  }
+#endif
+                  //if (x_ok && y_ok)
+                  //{
+                  gfx_slow_swizzling_blit(out_buffer, glyph_buffer, width * FONT_SCALE, height * FONT_SCALE, glyphx, glyphy, true);
+                  //}
 
                   free(glyph_buffer);
 
@@ -215,7 +220,6 @@ static void switch_font_render_message(
                                     scale, color, pos_x, pos_y, text_align);
             return;
       }
-
       line_height = scale / font->font_driver->get_line_height(font->font_data);
 
       for (;;)
@@ -258,7 +262,7 @@ static void switch_font_render_msg(
       unsigned width = video_info->width;
       unsigned height = video_info->height;
 
-      if (!font || !msg || !*msg)
+      if (!font || !msg || msg && !*msg)
             return;
 
       if (params)
@@ -299,6 +303,9 @@ static void switch_font_render_msg(
       }
 
       max_glyphs = strlen(msg);
+      // Garbage data on threading :shrug:
+      if (max_glyphs > 140)
+            return; // This is max length on 5 avg width
 
       /*if (drop_x || drop_y)
       max_glyphs    *= 2;
