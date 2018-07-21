@@ -38,4 +38,4 @@ wget https://git.m4xw.net/Switch/RetroArch/beetle-wswan-libretro/-/jobs/artifact
 wget https://git.m4xw.net/Switch/RetroArch/blueMSX-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O bluemsx.zip
 wget https://git.m4xw.net/Switch/RetroArch/fbalpha/-/jobs/artifacts/$BRANCH/download?job=$JOB -O fbalpha.zip
 wget https://git.m4xw.net/Switch/RetroArch/mame2003-plus-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003-plus.zip
-#wget https://git.m4xw.net/Switch/RetroArch/mgba/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mgba.zip
+wget https://git.m4xw.net/Switch/RetroArch/mgba/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mgba.zip
