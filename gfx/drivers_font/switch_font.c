@@ -175,7 +175,7 @@ static void switch_font_render_line(
                   int glyphy = y + off_y + delta_y * FONT_SCALE - FONT_SCALE * 2;
 
                   // Gonna try to catch it prior
-#if 0
+#if 1
                   bool x_ok = true, y_ok = true;
                   if ((glyphx + width * FONT_SCALE) > 1280)
                   {
@@ -188,10 +188,10 @@ static void switch_font_render_line(
                         printf("glyphy %i (y: %i, off_y: %i, delta_y: %i) , violated %i, glyphy: %i, heigth: %i\n", glyphy, y, off_y, delta_y, (glyphy + height * FONT_SCALE), glyphy, height);
                   }
 #endif
-                  //if (x_ok && y_ok)
-                  //{
-                  gfx_slow_swizzling_blit(out_buffer, glyph_buffer, width * FONT_SCALE, height * FONT_SCALE, glyphx, glyphy, true);
-                  //}
+                  if (x_ok && y_ok)
+                  {
+                        gfx_slow_swizzling_blit(out_buffer, glyph_buffer, width * FONT_SCALE, height * FONT_SCALE, glyphx, glyphy, true);
+                  }
 
                   free(glyph_buffer);
 
