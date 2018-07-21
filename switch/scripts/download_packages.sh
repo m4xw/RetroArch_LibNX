@@ -8,9 +8,9 @@ fi
 cd "$(dirname "$0")"
 
 BRANCH=$1
-JOB=package
+JOB="package"
 if [ $BRANCH = "develop" ]; then
-    $JOB = "nightly"
+    JOB="nightly"
 fi
 
 mkdir tmp_package
