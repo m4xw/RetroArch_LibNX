@@ -106,7 +106,7 @@ void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, in
                   }
 
                   dest_line[offs_x] = pixel;
-                  
+
                   offs_x = (offs_x - x_mask) & x_mask;
             }
 
@@ -117,11 +117,11 @@ void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, in
 }
 
 // needed to clear surface completely as hw scaling doesn't always scale to full resoution perflectly
-static void clear_screen(switch_video_t* sw)
+static void clear_screen(switch_video_t *sw)
 {
       gfxConfigureResolution(sw->vp.full_width, sw->vp.full_height);
 
-      uint32_t* out_buffer = (uint32_t *)gfxGetFramebuffer(NULL, NULL);
+      uint32_t *out_buffer = (uint32_t *)gfxGetFramebuffer(NULL, NULL);
 
       memset(out_buffer, 0, gfxGetFramebufferSize());
 
@@ -176,8 +176,8 @@ static void *switch_init(const video_info_t *video,
       }
 
       font_driver_init_osd(sw, false,
-         video->is_threaded,
-         FONT_DRIVER_RENDER_SWITCH);
+                           video->is_threaded,
+                           FONT_DRIVER_RENDER_SWITCH);
 
       return sw;
 }
@@ -325,9 +325,9 @@ static bool switch_frame(void *data, const void *frame,
 
       if (ffwd_mode && !sw->is_threaded)
       {
-          // render every 4th frame when in ffwd mode and not threaded
-          if ((frame_count % 4) != 0)
-              return true;
+            // render every 4th frame when in ffwd mode and not threaded
+            if ((frame_count % 4) != 0)
+                  return true;
       }
 
       if (sw->should_resize)
@@ -401,17 +401,17 @@ static bool switch_frame(void *data, const void *frame,
       }
       else if (sw->smooth) // bilinear
       {
-            struct scaler_ctx* ctx = &sw->scaler;
+            struct scaler_ctx *ctx = &sw->scaler;
             scaler_ctx_scale_direct(ctx, sw->image, frame);
             int w = sw->scaler.out_width;
             int h = sw->scaler.out_height;
             for (int y = 0; y < h; y++)
                   for (int x = 0; x < w; x++)
-                        out_buffer[gfxGetFramebufferDisplayOffset(x + sw->hw_scale.x_offset, y)] = sw->image[y*w+x];
+                        out_buffer[gfxGetFramebufferDisplayOffset(x + sw->hw_scale.x_offset, y)] = sw->image[y * w + x];
       }
       else
       {
-            struct scaler_ctx* ctx = &sw->scaler;
+            struct scaler_ctx *ctx = &sw->scaler;
             scaler_ctx_scale(ctx, sw->image + (sw->vp.y * sw->vp.full_width) + sw->vp.x, frame);
             gfx_slow_swizzling_blit(out_buffer, sw->image, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
             if (tmp_overlay)
@@ -600,14 +600,14 @@ static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
 }
 
 static void switch_set_osd_msg(void *data,
-      video_frame_info_t *video_info,
-      const char *msg,
-      const void *params, void *font)
+                               video_frame_info_t *video_info,
+                               const char *msg,
+                               const void *params, void *font)
 {
-   switch_video_t* sw = (switch_video_t*)data;
+      switch_video_t *sw = (switch_video_t *)data;
 
-   if (sw)
-      font_driver_render_msg(video_info, font, msg, params);
+      if (sw)
+            font_driver_render_msg(video_info, font, msg, params);
 }
 
 #ifdef HAVE_OVERLAY
