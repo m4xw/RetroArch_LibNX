@@ -9,6 +9,7 @@
 #include "../../libretro-common/include/formats/image.h"
 #include <gfx/scaler/scaler.h>
 #include <gfx/scaler/pixconv.h>
+#include <gfx/video_frame.h>
 
 #include <switch.h>
 
@@ -115,6 +116,20 @@ void gfx_slow_swizzling_blit(uint32_t *buffer, uint32_t *image, int w, int h, in
       }
 }
 
+// needed to clear surface completely as hw scaling doesn't always scale to full resoution perflectly
+static void clear_screen(switch_video_t* sw)
+{
+      gfxConfigureResolution(sw->vp.full_width, sw->vp.full_height);
+
+      uint32_t* out_buffer = (uint32_t *)gfxGetFramebuffer(NULL, NULL);
+
+      memset(out_buffer, 0, gfxGetFramebufferSize());
+
+      gfxFlushBuffers();
+      gfxSwapBuffers();
+      gfxWaitForVsync();
+}
+
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
@@ -125,7 +140,7 @@ static void *switch_init(const video_info_t *video,
       if (!sw)
             return NULL;
 
-      printf("loading switch gfx driver, width: %d, height: %d threaded: %d\n", video->width, video->height, video->is_threaded);
+      printf("loading switch gfx driver, width: %d, height: %d threaded: %d smooth %d\n", video->width, video->height, video->is_threaded, video->smooth);
       sw->vp.x = 0;
       sw->vp.y = 0;
       sw->vp.width = sw->o_width = video->width;
@@ -146,6 +161,10 @@ static void *switch_init(const video_info_t *video,
       sw->should_resize = true;
       sw->o_size = true;
       sw->is_threaded = video->is_threaded;
+      sw->smooth = video->smooth;
+
+      if (!sw->smooth)
+            gfxConfigureResolution(1280, 720);
 
       // Autoselect driver
       if (input && input_data)
@@ -161,11 +180,6 @@ static void *switch_init(const video_info_t *video,
          FONT_DRIVER_RENDER_SWITCH);
 
       return sw;
-}
-
-static void switch_wait_vsync(switch_video_t *sw)
-{
-      gfxWaitForVsync();
 }
 
 static void switch_update_viewport(switch_video_t *sw, video_frame_info_t *video_info)
@@ -304,8 +318,6 @@ static bool switch_frame(void *data, const void *frame,
                          const char *msg, video_frame_info_t *video_info)
 
 {
-      //static uint64_t last_frame = 0;
-
       unsigned x, y;
       uint32_t *out_buffer = NULL;
       switch_video_t *sw = data;
@@ -336,9 +348,27 @@ static bool switch_frame(void *data, const void *frame,
             sw->scaler.in_stride = pitch;
             sw->scaler.in_fmt = sw->rgb32 ? SCALER_FMT_ARGB8888 : SCALER_FMT_RGB565;
 
-            sw->scaler.out_width = sw->vp.width;
-            sw->scaler.out_height = sw->vp.height;
-            sw->scaler.out_stride = sw->vp.full_width * sizeof(uint32_t);
+            if (!sw->smooth)
+            {
+                  sw->scaler.out_width = sw->vp.width;
+                  sw->scaler.out_height = sw->vp.height;
+                  sw->scaler.out_stride = sw->vp.full_width * sizeof(uint32_t);
+            }
+            else
+            {
+                  sw->scaler.out_width = width;
+                  sw->scaler.out_height = height;
+                  sw->scaler.out_stride = width * sizeof(uint32_t);
+
+                  float screen_ratio = (float)sw->vp.full_width / sw->vp.full_height;
+                  float tgt_ratio = (float)sw->vp.width / sw->vp.height;
+
+                  sw->hw_scale.width = ceil(screen_ratio / tgt_ratio * sw->scaler.out_width);
+                  sw->hw_scale.height = sw->scaler.out_height;
+                  sw->hw_scale.x_offset = ceil((sw->hw_scale.width - sw->scaler.out_width) / 2.0);
+                  if (!sw->menu_texture.enable)
+                        gfxConfigureResolution(sw->hw_scale.width, sw->hw_scale.height);
+            }
             sw->scaler.out_fmt = SCALER_FMT_ABGR8888;
 
             sw->scaler.scaler_type = SCALER_TYPE_POINT;
@@ -356,22 +386,41 @@ static bool switch_frame(void *data, const void *frame,
             memset(sw->image, 0, sizeof(sw->image));
       }
 
-      if (width > 0 && height > 0)
-      {
-            scaler_ctx_scale(&sw->scaler, sw->image + (sw->vp.y * sw->vp.full_width) + sw->vp.x, frame);
-      }
+      out_buffer = (uint32_t *)gfxGetFramebuffer(NULL, NULL);
 
       if (sw->menu_texture.enable)
       {
-            memset(sw->tmp_image, 0, sizeof(sw->tmp_image));
             menu_driver_frame(video_info);
 
             if (sw->menu_texture.pixels)
             {
+                  gfx_slow_swizzling_blit(out_buffer, nx_backgroundImage, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
                   scaler_ctx_scale(&sw->menu_texture.scaler, sw->tmp_image + ((sw->vp.full_height - sw->menu_texture.tgth) / 2) * sw->vp.full_width + ((sw->vp.full_width - sw->menu_texture.tgtw) / 2), sw->menu_texture.pixels);
+                  gfx_slow_swizzling_blit(out_buffer, sw->tmp_image, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
             }
       }
-      else if (video_info->statistics_show)
+      else if (sw->smooth) // bilinear
+      {
+            struct scaler_ctx* ctx = &sw->scaler;
+            scaler_ctx_scale_direct(ctx, sw->image, frame);
+            int w = sw->scaler.out_width;
+            int h = sw->scaler.out_height;
+            for (int y = 0; y < h; y++)
+                  for (int x = 0; x < w; x++)
+                        out_buffer[gfxGetFramebufferDisplayOffset(x + sw->hw_scale.x_offset, y)] = sw->image[y*w+x];
+      }
+      else
+      {
+            struct scaler_ctx* ctx = &sw->scaler;
+            scaler_ctx_scale(ctx, sw->image + (sw->vp.y * sw->vp.full_width) + sw->vp.x, frame);
+            gfx_slow_swizzling_blit(out_buffer, sw->image, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
+            if (tmp_overlay)
+            {
+                  gfx_slow_swizzling_blit(out_buffer, tmp_overlay, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
+            }
+      }
+
+      if (video_info->statistics_show && !sw->smooth)
       {
             struct font_params *osd_params = (struct font_params *)&video_info->osd_stat_params;
 
@@ -382,34 +431,13 @@ static bool switch_frame(void *data, const void *frame,
             }
       }
 
-      width = 0;
-      height = 0;
-
-      out_buffer = (uint32_t *)gfxGetFramebuffer(&width, &height);
-
-      if (sw->menu_texture.enable && sw->menu_texture.pixels)
-      {
-            gfx_slow_swizzling_blit(out_buffer, nx_backgroundImage, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
-            gfx_slow_swizzling_blit(out_buffer, sw->tmp_image, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
-      }
-      else
-      {
-            gfx_slow_swizzling_blit(out_buffer, sw->image, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
-            if (tmp_overlay)
-            {
-                  gfx_slow_swizzling_blit(out_buffer, tmp_overlay, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
-            }
-      }
-
-      if (msg)
+      if (msg && !sw->smooth)
             font_driver_render_msg(video_info, NULL, msg, NULL);
 
       gfxFlushBuffers();
       gfxSwapBuffers();
       if (sw->vsync)
-            switch_wait_vsync(sw);
-
-      //last_frame = svcGetSystemTick();
+            gfxWaitForVsync();
 
       return true;
 }
@@ -540,6 +568,12 @@ static void switch_set_texture_frame(
             }
       }
 
+      if (!sw->menu_texture.enable && sw->smooth)
+      {
+            clear_screen(sw);
+            gfxConfigureResolution(sw->hw_scale.width, sw->hw_scale.height);
+      }
+
       memcpy(sw->menu_texture.pixels, frame, width * height * (rgb32 ? 4 : 2));
 }
 
@@ -551,6 +585,16 @@ static void switch_apply_state_changes(void *data)
 static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
 {
       switch_video_t *sw = data;
+
+      if (!sw->menu_texture.enable && enable)
+      {
+            gfxConfigureResolution(1280, 720);
+      }
+      else if (!enable && sw->smooth)
+      {
+            clear_screen(sw);
+      }
+
       sw->menu_texture.enable = enable;
       sw->menu_texture.fullscreen = full_screen;
 }
@@ -699,3 +743,5 @@ video_driver_t video_switch = {
 #endif
     switch_get_poke_interface,
 };
+
+/* vim: set ts=6 sw=6 sts=6: */

@@ -8,6 +8,7 @@ typedef struct
 {
       bool vsync;
       bool rgb32;
+      bool smooth; // bilinear
       unsigned width, height;
       unsigned rotation;
       struct video_viewport vp;
@@ -28,6 +29,12 @@ typedef struct
 
             struct scaler_ctx scaler;
       } menu_texture;
+
+      struct {
+          uint32_t width;
+          uint32_t height;
+          uint32_t x_offset;
+      } hw_scale;
 
       uint32_t image[1280 * 720];
       uint32_t tmp_image[1280 * 720];
