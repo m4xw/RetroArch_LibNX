@@ -27,7 +27,7 @@
 #include "../verbosity.h"
 
 static const font_renderer_driver_t *font_backends[] = {
-#ifdef HAVE_FREETYPE
+#if defined(HAVE_FREETYPE) && !defined(SWITCH) // TODO: Fix freetype
    &freetype_font_renderer,
 #endif
 #if defined(__APPLE__) && defined(HAVE_CORETEXT)

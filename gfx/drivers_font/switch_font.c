@@ -24,7 +24,7 @@ typedef struct
 static void *switch_font_init_font(void *data, const char *font_path,
                                    float font_size, bool is_threaded)
 {
-      switch_font_t *font = (switch_font_t *)calloc(1, sizeof(*font));
+      switch_font_t *font = (switch_font_t *)calloc(1, sizeof(switch_font_t));
 
       if (!font)
             return NULL;
@@ -191,6 +191,11 @@ static void switch_font_render_line(
                   if (x_ok && y_ok)
                   {
                         gfx_slow_swizzling_blit(out_buffer, glyph_buffer, width * FONT_SCALE, height * FONT_SCALE, glyphx, glyphy, true);
+                  }
+                  else
+                  {
+                        free(glyph_buffer);
+                        break;
                   }
 
                   free(glyph_buffer);
