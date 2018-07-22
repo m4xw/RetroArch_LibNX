@@ -20,7 +20,6 @@ wget https://git.m4xw.net/Switch/RetroArch/Genesis-Plus-GX/-/jobs/artifacts/$BRA
 wget https://git.m4xw.net/Switch/RetroArch/snes9x/-/jobs/artifacts/$BRANCH/download?job=$JOB -O snes9x.zip
 wget https://git.m4xw.net/Switch/RetroArch/libretro-snes9x2010/-/jobs/artifacts/$BRANCH/download?job=$JOB -O snes9x2010.zip
 wget https://git.m4xw.net/Switch/RetroArch/4do-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O 4do.zip
-wget https://git.m4xw.net/Switch/RetroArch/mame2003-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003.zip
 wget https://git.m4xw.net/Switch/RetroArch/virtualjaguar-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O virtualjaguar.zip
 wget https://git.m4xw.net/Switch/RetroArch/gambatte-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O gambatte.zip
 wget https://git.m4xw.net/Switch/RetroArch/beetle-vb-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O beetle-vb.zip
@@ -37,5 +36,7 @@ wget https://git.m4xw.net/Switch/RetroArch/libretro-fceumm/-/jobs/artifacts/$BRA
 wget https://git.m4xw.net/Switch/RetroArch/beetle-wswan-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O wswan.zip
 wget https://git.m4xw.net/Switch/RetroArch/blueMSX-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O bluemsx.zip
 wget https://git.m4xw.net/Switch/RetroArch/fbalpha/-/jobs/artifacts/$BRANCH/download?job=$JOB -O fbalpha.zip
-wget https://git.m4xw.net/Switch/RetroArch/mame2003-plus-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003-plus.zip
 wget https://git.m4xw.net/Switch/RetroArch/mgba/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mgba.zip
+wget https://git.m4xw.net/Switch/RetroArch/beetle-psx/-/jobs/artifacts/$BRANCH/download?job=$JOB -O beetle-psx.zip
+wget https://git.m4xw.net/Switch/RetroArch/mame2003-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003.zip
+wget https://git.m4xw.net/Switch/RetroArch/mame2003-plus-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003-plus.zip
