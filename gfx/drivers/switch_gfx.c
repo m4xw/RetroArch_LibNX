@@ -316,12 +316,14 @@ static bool switch_frame(void *data, const void *frame,
                          unsigned width, unsigned height,
                          uint64_t frame_count, unsigned pitch,
                          const char *msg, video_frame_info_t *video_info)
-
 {
       unsigned x, y;
       uint32_t *out_buffer = NULL;
       switch_video_t *sw = data;
       bool ffwd_mode = video_info->input_driver_nonblock_state;
+
+      if (!frame)
+            return;
 
       if (ffwd_mode && !sw->is_threaded)
       {
