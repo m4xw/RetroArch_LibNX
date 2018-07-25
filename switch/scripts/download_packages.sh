@@ -40,3 +40,4 @@ wget https://git.m4xw.net/Switch/RetroArch/mgba/-/jobs/artifacts/$BRANCH/downloa
 wget https://git.m4xw.net/Switch/RetroArch/beetle-psx/-/jobs/artifacts/$BRANCH/download?job=$JOB -O beetle-psx.zip
 wget https://git.m4xw.net/Switch/RetroArch/mame2003-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003.zip
 wget https://git.m4xw.net/Switch/RetroArch/mame2003-plus-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003-plus.zip
+wget https://git.m4xw.net/Switch/RetroArch/pcsx_rearmed/-/jobs/artifacts/$BRANCH/download?job=$JOB -O pcsx_rearmed.zip
