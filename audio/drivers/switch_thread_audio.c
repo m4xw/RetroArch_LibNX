@@ -38,8 +38,7 @@
 
 static inline void lockMutex(Mutex* mtx)
 {
-      while (!mutexTryLock(mtx))
-            svcSleepThread(3);
+      mutexLock(mtx);
 }
 
 typedef struct
