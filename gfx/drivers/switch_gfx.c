@@ -438,7 +438,7 @@ static bool switch_frame(void *data, const void *frame,
 
       gfxFlushBuffers();
       gfxSwapBuffers();
-      if (sw->vsync)
+      if (sw->vsync || video_info->menu_is_alive)
             gfxWaitForVsync();
 
       return true;
