@@ -82,7 +82,7 @@ EXEFS_SRC	:=	exefs_src
 #ROMFS	    :=	switch/romfs
 
 #APP_TITLE := RetroNX
-APP_ICON := switch/retronx.jpg
+APP_ICON := icon.jpg #switch/retronx.jpg
 APP_VERSION := 0.9.7
 APP_AUTHOR := M4xw, Credit: Reswitched, libretro
 
