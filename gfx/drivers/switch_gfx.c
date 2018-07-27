@@ -340,7 +340,7 @@ static bool switch_frame(void *data, const void *frame,
       uint32_t *out_buffer = NULL;
       switch_video_t *sw = data;
 
-      if (sw->should_resize)
+      if (sw->should_resize || width != sw->last_width || height != sw->last_height)
       {
             printf("[Video] Requesting new size\n");
             printf("[Video] fw: %i fh: %i w: %i h: %i x: %i y: %i\n", sw->vp.full_width, sw->vp.full_height, sw->vp.width, sw->vp.height, sw->vp.x, sw->vp.y);
