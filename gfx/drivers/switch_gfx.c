@@ -164,7 +164,6 @@ static void *switch_init(const video_info_t *video,
       sw->smooth = video->smooth;
       sw->menu_texture.enable = false;
 
-
       // Autoselect driver
       if (input && input_data)
       {
@@ -442,7 +441,7 @@ static bool switch_frame(void *data, const void *frame,
             }
       }
 
-      if (msg && !sw->smooth)
+      if (msg)
             font_driver_render_msg(video_info, NULL, msg, NULL);
 
       gfxFlushBuffers();
