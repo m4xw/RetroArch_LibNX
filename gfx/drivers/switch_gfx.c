@@ -133,7 +133,6 @@ static void clear_screen(switch_video_t *sw)
 static void *switch_init(const video_info_t *video,
                          const input_driver_t **input, void **input_data)
 {
-      unsigned x, y;
       void *switchinput = NULL;
 
       switch_video_t *sw = (switch_video_t *)calloc(1, sizeof(*sw));
@@ -147,6 +146,7 @@ static void *switch_init(const video_info_t *video,
       sw->vp.height = sw->o_height = video->height;
       sw->overlay_enabled = false;
       sw->overlay = NULL;
+      sw->in_menu = false;
 
       sw->vp.full_width = 1280;
       sw->vp.full_height = 720;
@@ -162,9 +162,8 @@ static void *switch_init(const video_info_t *video,
       sw->o_size = true;
       sw->is_threaded = video->is_threaded;
       sw->smooth = video->smooth;
+      sw->menu_texture.enable = false;
 
-      if (!sw->smooth)
-            gfxConfigureResolution(1280, 720);
 
       // Autoselect driver
       if (input && input_data)
@@ -178,6 +177,8 @@ static void *switch_init(const video_info_t *video,
       font_driver_init_osd(sw, false,
                            video->is_threaded,
                            FONT_DRIVER_RENDER_SWITCH);
+
+      clear_screen(sw);
 
       return sw;
 }
@@ -317,13 +318,12 @@ static bool switch_frame(void *data, const void *frame,
                          uint64_t frame_count, unsigned pitch,
                          const char *msg, video_frame_info_t *video_info)
 {
-      unsigned x, y;
-      uint32_t *out_buffer = NULL;
       switch_video_t *sw = data;
+      uint32_t *out_buffer = NULL;
       bool ffwd_mode = video_info->input_driver_nonblock_state;
 
       if (!frame)
-            return;
+            return true;
 
       if (ffwd_mode && !sw->is_threaded)
       {
@@ -368,8 +368,11 @@ static bool switch_frame(void *data, const void *frame,
                   sw->hw_scale.width = ceil(screen_ratio / tgt_ratio * sw->scaler.out_width);
                   sw->hw_scale.height = sw->scaler.out_height;
                   sw->hw_scale.x_offset = ceil((sw->hw_scale.width - sw->scaler.out_width) / 2.0);
-                  if (!sw->menu_texture.enable)
+                  if (!video_info->menu_is_alive)
+                  {
+                        clear_screen(sw);
                         gfxConfigureResolution(sw->hw_scale.width, sw->hw_scale.height);
+                  }
             }
             sw->scaler.out_fmt = SCALER_FMT_ABGR8888;
 
@@ -385,10 +388,16 @@ static bool switch_frame(void *data, const void *frame,
             sw->last_height = height;
 
             sw->should_resize = false;
-            memset(sw->image, 0, sizeof(sw->image));
       }
 
       out_buffer = (uint32_t *)gfxGetFramebuffer(NULL, NULL);
+
+      if (sw->in_menu && !video_info->menu_is_alive && sw->smooth)
+      {
+            memset(out_buffer, 0, sw->vp.full_width * sw->vp.full_height * 4);
+            gfxConfigureResolution(sw->hw_scale.width, sw->hw_scale.height);
+      }
+      sw->in_menu = video_info->menu_is_alive;
 
       if (sw->menu_texture.enable)
       {
@@ -520,17 +529,22 @@ static void switch_set_texture_frame(
     void *data, const void *frame, bool rgb32,
     unsigned width, unsigned height, float alpha)
 {
-
       switch_video_t *sw = data;
+      size_t sz = width * height * (rgb32 ? 4 : 2);
 
       if (!sw->menu_texture.pixels ||
           sw->menu_texture.width != width ||
           sw->menu_texture.height != height)
       {
             if (sw->menu_texture.pixels)
-                  free(sw->menu_texture.pixels);
+            {
+                  realloc(sw->menu_texture.pixels, sz);
+            }
+            else
+            {
+                  sw->menu_texture.pixels = malloc(sz);
+            }
 
-            sw->menu_texture.pixels = malloc(width * height * (rgb32 ? 4 : 2));
             if (!sw->menu_texture.pixels)
             {
                   printf("failed to allocate buffer for menu texture\n");
@@ -570,18 +584,12 @@ static void switch_set_texture_frame(
             }
       }
 
-      if (!sw->menu_texture.enable && sw->smooth)
-      {
-            clear_screen(sw);
-            gfxConfigureResolution(sw->hw_scale.width, sw->hw_scale.height);
-      }
-
-      memcpy(sw->menu_texture.pixels, frame, width * height * (rgb32 ? 4 : 2));
+      memcpy(sw->menu_texture.pixels, frame, sz);
 }
 
 static void switch_apply_state_changes(void *data)
 {
-      switch_video_t *sw = (switch_video_t *)data;
+      (void)data;
 }
 
 static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
@@ -590,11 +598,12 @@ static void switch_set_texture_enable(void *data, bool enable, bool full_screen)
 
       if (!sw->menu_texture.enable && enable)
       {
-            gfxConfigureResolution(1280, 720);
+            gfxConfigureResolution(sw->vp.full_width, sw->vp.full_height);
       }
-      else if (!enable && sw->smooth)
+      else if (!enable && sw->menu_texture.enable && sw->smooth)
       {
             clear_screen(sw);
+            gfxConfigureResolution(sw->hw_scale.width, sw->hw_scale.height);
       }
 
       sw->menu_texture.enable = enable;
@@ -661,15 +670,15 @@ static void switch_overlay_vertex_geom(void *data,
 
 static void switch_overlay_full_screen(void *data, bool enable)
 {
-      switch_video_t *swa = (switch_video_t *)data;
+      (void)data;
+      (void)enable;
 }
 
 static void switch_overlay_set_alpha(void *data, unsigned idx, float mod)
 {
-      switch_video_t *swa = (switch_video_t *)data;
-
-      if (!swa)
-            return;
+      (void)data;
+      (void)idx;
+      (void)mod;
 }
 
 static const video_overlay_interface_t switch_overlay = {
