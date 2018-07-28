@@ -1,5 +1,5 @@
 variables:
-  BRANCH: master
+  BRANCH: develop
 
 trigger_build:
   script:
