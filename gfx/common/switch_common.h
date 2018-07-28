@@ -14,6 +14,7 @@ typedef struct
       struct video_viewport vp;
       struct texture_image *overlay;
       bool overlay_enabled;
+      bool in_menu;
       struct
       {
             bool enable;
