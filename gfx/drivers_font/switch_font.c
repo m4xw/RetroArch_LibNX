@@ -230,7 +230,7 @@ static void switch_font_render_message(
             }
             return;
       }
-      line_height = scale / font->font_driver->get_line_height(font->font_data);
+      line_height = scale / font->font_driver->get_line_height(font->font_data) / 2;
 
       for (;;)
       {
