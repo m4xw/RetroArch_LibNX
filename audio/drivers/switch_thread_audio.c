@@ -193,7 +193,7 @@ static void *switch_thread_audio_init(const char *device, unsigned rate, unsigne
 
 static bool switch_thread_audio_start(void *data, bool is_shutdown)
 {
-      RARCH_LOG("[Audio]: switch_thread_audio_start\n");
+      //RARCH_LOG("[Audio]: switch_thread_audio_start\n");
       switch_thread_audio_t *swa = (switch_thread_audio_t *)data;
 
       if (!swa)
@@ -205,7 +205,7 @@ static bool switch_thread_audio_start(void *data, bool is_shutdown)
 
 static bool switch_thread_audio_stop(void *data)
 {
-      RARCH_LOG("[Audio]: switch_thread_audio_stop\n");
+      //RARCH_LOG("[Audio]: switch_thread_audio_stop\n");
       switch_thread_audio_t* swa = (switch_thread_audio_t*)data;
 
       if (!swa)
@@ -217,7 +217,7 @@ static bool switch_thread_audio_stop(void *data)
 
 static void switch_thread_audio_free(void *data)
 {
-      RARCH_LOG("[Audio]: switch_thread_audio_free\n");
+      //RARCH_LOG("[Audio]: switch_thread_audio_free\n");
       switch_thread_audio_t *swa = (switch_thread_audio_t *)data;
 
       if (!swa)
@@ -307,7 +307,7 @@ static bool switch_thread_audio_alive(void *data)
 
 static void switch_thread_audio_set_nonblock_state(void *data, bool state)
 {
-      RARCH_LOG("[Audio]: switch_thread_audio_set_nonblock_state state %d\n", (int)state);
+      //RARCH_LOG("[Audio]: switch_thread_audio_set_nonblock_state state %d\n", (int)state);
       switch_thread_audio_t *swa = (switch_thread_audio_t *)data;
 
       if (swa)
