@@ -29,7 +29,6 @@ static void *switch_font_init_font(void *data, const char *font_path,
       if (!font)
             return NULL;
 
-      font_size = 10;
       if (!font_renderer_create_default((const void **)&font->font_driver,
                                         &font->font_data, font_path, font_size))
       {
@@ -93,8 +92,6 @@ static int switch_font_get_message_width(void *data, const char *msg,
       return delta_x * scale;
 }
 
-#define FONT_SCALE 2
-
 static void switch_font_render_line(
     video_frame_info_t *video_info,
     switch_font_t *font, const char *msg, unsigned msg_len,
@@ -119,7 +116,7 @@ static void switch_font_render_line(
                   x -= switch_font_get_message_width(font, msg, msg_len, scale);
                   break;
             case TEXT_ALIGN_CENTER:
-                  x -= switch_font_get_message_width(font, msg, msg_len, scale) / 2.0;
+                  x -= switch_font_get_message_width(font, msg, msg_len, scale) / 2;
                   break;
             }
 
@@ -142,63 +139,27 @@ static void switch_font_render_line(
                   if (!glyph)
                         continue;
 
-                  off_x = glyph->draw_offset_x * FONT_SCALE;
-                  off_y = glyph->draw_offset_y * FONT_SCALE;
+                  off_x = x + glyph->draw_offset_x + delta_x;
+                  off_y = y + glyph->draw_offset_y + delta_y;
                   width = glyph->width;
                   height = glyph->height;
 
                   tex_x = glyph->atlas_offset_x;
                   tex_y = glyph->atlas_offset_y;
 
-                  uint32_t *glyph_buffer = malloc((width * FONT_SCALE) * (height * FONT_SCALE) * sizeof(uint32_t)); //TODO Replace this by a large-enough buffer depending on FONT_SCALE
-
                   for (int y = tex_y; y < tex_y + height; y++)
                   {
                         uint8_t *row = &font->atlas->buffer[y * font->atlas->width];
                         for (int x = tex_x; x < tex_x + width; x++)
                         {
-                              uint8_t alpha = row[x];
-                              uint32_t pixel = RGBA8(0, 255, 0, alpha);
-                              for (int i = 0; i < FONT_SCALE; i++)
-                              {
-                                    for (int j = 0; j < FONT_SCALE; j++)
-                                    {
-                                          int px = (x - tex_x) * FONT_SCALE + j;
-                                          int py = (y - tex_y) * FONT_SCALE + i;
-                                          glyph_buffer[py * (width * FONT_SCALE) + px] = pixel;
-                                    }
-                              }
+                            if (!row[x])
+                                continue;
+                              int x1 = off_x + (x - tex_x);
+                              int y1 = off_y + (y - tex_y);
+                              if (x1 < fbWidth && y1 < fbHeight)
+                                  out_buffer[gfxGetFramebufferDisplayOffset(x1, y1)] = color;
                         }
                   }
-
-                  int glyphx = x + off_x + delta_x * FONT_SCALE + FONT_SCALE * 2;
-                  int glyphy = y + off_y + delta_y * FONT_SCALE - FONT_SCALE * 2;
-
-                  // Gonna try to catch it prior
-#if 1
-                  bool x_ok = true, y_ok = true;
-                  if ((glyphx + width * FONT_SCALE) > 1280)
-                  {
-                        x_ok = false;
-                        //printf("glpyhx %i (x: %i, off_x: %i, delta_x: %i), violated calc: %i, width: %i\n", glyphx, x, off_x, delta_x, (glyphx + width * FONT_SCALE), width);
-                  }
-                  if ((glyphy + height * FONT_SCALE) > 720)
-                  {
-                        y_ok = false;
-                        //printf("glyphy %i (y: %i, off_y: %i, delta_y: %i) , violated %i, glyphy: %i, heigth: %i\n", glyphy, y, off_y, delta_y, (glyphy + height * FONT_SCALE), glyphy, height);
-                  }
-#endif
-                  if (x_ok && y_ok)
-                  {
-                        gfx_slow_swizzling_blit(out_buffer, glyph_buffer, width * FONT_SCALE, height * FONT_SCALE, glyphx, glyphy, true);
-                  }
-                  else
-                  {
-                        free(glyph_buffer);
-                        break;
-                  }
-
-                  free(glyph_buffer);
 
                   delta_x += glyph->advance_x;
                   delta_y += glyph->advance_y;
@@ -230,7 +191,7 @@ static void switch_font_render_message(
             }
             return;
       }
-      line_height = scale / font->font_driver->get_line_height(font->font_data) / 2;
+      line_height = scale / font->font_driver->get_line_height(font->font_data);
 
       for (;;)
       {
