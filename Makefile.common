@@ -861,6 +861,10 @@ ifeq ($(HAVE_THREAD_STORAGE), 1)
    DEFINES += -DHAVE_THREAD_STORAGE
 endif
 
+ifeq ($(HAVE_SWITCH), 1)
+   OBJ += $(LIBRETRO_COMM_DIR)/rthreads/switch_pthread.o
+endif
+
 ifeq ($(HAVE_VITA2D), 1)
 	OBJ += $(DEPS_DIR)/libvita2d/source/vita2d.o \
 			 $(DEPS_DIR)/libvita2d/source/vita2d_texture.o \

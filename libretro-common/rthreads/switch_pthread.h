@@ -24,19 +24,13 @@
 #define _SWITCH_PTHREAD_WRAP_
 
 #include <time.h>
-#include <errno.h>
 #include <stdio.h>
-
-// memset
-#include <string.h>
 
 #include <retro_inline.h>
 #include <switch.h>
 #include "../../verbosity.h"
 
 #define THREADVARS_MAGIC 0x21545624 // !TV$
-
-extern unsigned cpu_features_get_core_amount(void);
 
 // This structure is exactly 0x20 bytes, if more is needed modify getThreadVars() below
 typedef struct
@@ -57,7 +51,7 @@ typedef struct
     void *tls_tp; // !! Offset needs to be TLS+0x1F8 for __aarch64_read_tp !!
 } ThreadVars;
 
-static inline ThreadVars *getThreadVars(void)
+static INLINE ThreadVars *getThreadVars(void)
 {
     return (ThreadVars *)((u8 *)armGetTls() + 0x1E0);
 }
@@ -65,73 +59,11 @@ static inline ThreadVars *getThreadVars(void)
 #define STACKSIZE (8 * 1024)
 
 /* libnx threads return void but pthreads return void pointer */
-static bool mutex_inited = false;
-static Mutex safe_double_thread_launch;
-static void *(*start_routine_jump)(void *);
+void pthread_exit(void *retval);
 
-static INLINE void pthread_exit(void *retval)
-{
-    (void)retval;
-    printf("[Threading]: Exiting Thread\n");
-    svcExitThread();
-}
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg);
 
-// Access is safe by safe_double_thread_launch Mutex
-static uint32_t threadCounter = 1;
-
-static void switch_thread_launcher(void *data)
-{
-    threadCounter++;
-    void *(*start_routine_jump_safe)(void *) = start_routine_jump;
-
-    mutexUnlock(&safe_double_thread_launch);
-
-    start_routine_jump_safe(data);
-
-    return;
-}
-
-static INLINE int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine)(void *), void *arg)
-{
-    u32 prio = 0;
-    Thread new_switch_thread;
-
-    if (!mutex_inited)
-    {
-        mutexInit(&safe_double_thread_launch);
-        mutex_inited = true;
-    }
-
-    mutexLock(&safe_double_thread_launch);
-
-    svcGetThreadPriority(&prio, CUR_THREAD_HANDLE);
-
-    start_routine_jump = start_routine;
-    //if (threadCounter == cpu_features_get_core_amount())
-    //    threadCounter = 1;
-
-    int rc = threadCreate(&new_switch_thread, switch_thread_launcher, arg, STACKSIZE, prio - 1, 1);
-
-    if (R_FAILED(rc))
-    {
-        mutexUnlock(&safe_double_thread_launch);
-        return EAGAIN;
-    }
-
-    printf("[Threading]: Starting Thread(#%i)\n", threadCounter);
-    if (R_FAILED(threadStart(&new_switch_thread)))
-    {
-        threadClose(&new_switch_thread);
-        mutexUnlock(&safe_double_thread_launch);
-        return -1;
-    }
-
-    *thread = new_switch_thread;
-
-    return 0;
-}
-
-Thread threadGetCurrent(void)
+static INLINE Thread threadGetCurrent(void)
 {
     ThreadVars *tv = getThreadVars();
     return *tv->thread_ptr;
@@ -149,7 +81,7 @@ static INLINE int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutex
     return 0;
 }
 
-static INLINE int pthread_mutex_destroy(pthread_mutex_t *mutex)
+INLINE int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
     // Nothing
     *mutex = 0;
@@ -170,7 +102,7 @@ static INLINE int pthread_mutex_unlock(pthread_mutex_t *mutex)
     return 0;
 }
 
-static INLINE int pthread_detach(pthread_t thread)
+INLINE int pthread_detach(pthread_t thread)
 {
     (void)thread;
     // Nothing for now
@@ -226,13 +158,13 @@ static INLINE int pthread_cond_broadcast(pthread_cond_t *cond)
     return 0;
 }
 
-static INLINE int pthread_cond_destroy(pthread_cond_t *cond)
+INLINE int pthread_cond_destroy(pthread_cond_t *cond)
 {
     // Nothing
     return 0;
 }
 
-static INLINE int pthread_equal(pthread_t t1, pthread_t t2)
+INLINE int pthread_equal(pthread_t t1, pthread_t t2)
 {
     if (t1.handle == t2.handle)
         return 1;
