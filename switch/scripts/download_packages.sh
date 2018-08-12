@@ -41,3 +41,6 @@ wget https://git.m4xw.net/Switch/RetroArch/beetle-psx/-/jobs/artifacts/$BRANCH/d
 wget https://git.m4xw.net/Switch/RetroArch/mame2003-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003.zip
 wget https://git.m4xw.net/Switch/RetroArch/mame2003-plus-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O mame2003-plus.zip
 wget https://git.m4xw.net/Switch/RetroArch/pcsx_rearmed/-/jobs/artifacts/$BRANCH/download?job=$JOB -O pcsx_rearmed.zip
+wget https://git.m4xw.net/Switch/RetroArch/picodrive/-/jobs/artifacts/$BRANCH/download?job=$JOB -O picodrive.zip
+wget https://git.m4xw.net/Switch/RetroArch/fmsx/-/jobs/artifacts/$BRANCH/download?job=$JOB -O fmsx.zip
+wget https://git.m4xw.net/Switch/RetroArch/dosbox/-/jobs/artifacts/$BRANCH/download?job=$JOB -O dosbox.zip
