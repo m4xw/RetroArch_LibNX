@@ -74,18 +74,18 @@ uint32_t *tmp_overlay = 0;
 
 typedef struct
 {
-      bool bg_modified;
-      bool force_redraw;
-      bool mouse_show;
-      unsigned last_width;
-      unsigned last_height;
-      unsigned frame_count;
-      bool bg_thickness;
-      bool border_thickness;
-      float scroll_y;
-      char *msgbox;
-      
-      font_data_t* font;
+    bool bg_modified;
+    bool force_redraw;
+    bool mouse_show;
+    unsigned last_width;
+    unsigned last_height;
+    unsigned frame_count;
+    bool bg_thickness;
+    bool border_thickness;
+    float scroll_y;
+    char *msgbox;
+
+    font_data_t *font;
 } nxrgui_t;
 
 static uint16_t *nxrgui_framebuf_data = NULL;
@@ -101,41 +101,41 @@ static uint16_t *nxrgui_framebuf_data = NULL;
 
 static uint16_t argb32_to_rgba4444(uint32_t col)
 {
-      unsigned a = ((col >> 24) & 0xff) >> 4;
-      unsigned r = ((col >> 16) & 0xff) >> 4;
-      unsigned g = ((col >> 8) & 0xff) >> 4;
-      unsigned b = ((col & 0xff)) >> 4;
-      return (r << 12) | (g << 8) | (b << 4) | a;
+    unsigned a = ((col >> 24) & 0xff) >> 4;
+    unsigned r = ((col >> 16) & 0xff) >> 4;
+    unsigned g = ((col >> 8) & 0xff) >> 4;
+    unsigned b = ((col & 0xff)) >> 4;
+    return (r << 12) | (g << 8) | (b << 4) | a;
 }
 #endif
 
 static uint16_t nxrgui_gray_filler(nxrgui_t *nxrgui, unsigned x, unsigned y)
 {
-      unsigned shft = (nxrgui->bg_thickness ? 1 : 0);
-      unsigned col = (((x >> shft) + (y >> shft)) & 1) + 1;
+    unsigned shft = (nxrgui->bg_thickness ? 1 : 0);
+    unsigned col = (((x >> shft) + (y >> shft)) & 1) + 1;
 #if defined(GEKKO) || defined(PSP)
-      return (6 << 12) | (col << 8) | (col << 4) | (col << 0);
+    return (6 << 12) | (col << 8) | (col << 4) | (col << 0);
 #elif defined(SWITCH)
-      return (((31 * (54)) / 255) << 11) |
-             (((63 * (54)) / 255) << 5) |
-             ((31 * (54)) / 255);
+    return (((31 * (54)) / 255) << 11) |
+           (((63 * (54)) / 255) << 5) |
+           ((31 * (54)) / 255);
 #else
-      return (col << 13) | (col << 9) | (col << 5) | (12 << 0);
+    return (col << 13) | (col << 9) | (col << 5) | (12 << 0);
 #endif
 }
 
 static uint16_t nxrgui_green_filler(nxrgui_t *nxrgui, unsigned x, unsigned y)
 {
-      unsigned shft = (nxrgui->border_thickness ? 1 : 0);
-      unsigned col = (((x >> shft) + (y >> shft)) & 1) + 1;
+    unsigned shft = (nxrgui->border_thickness ? 1 : 0);
+    unsigned col = (((x >> shft) + (y >> shft)) & 1) + 1;
 #if defined(GEKKO) || defined(PSP)
-      return (6 << 12) | (col << 8) | (col << 5) | (col << 0);
+    return (6 << 12) | (col << 8) | (col << 5) | (col << 0);
 #elif defined(SWITCH)
-      return (((31 * (54)) / 255) << 11) |
-             (((63 * (109)) / 255) << 5) |
-             ((31 * (54)) / 255);
+    return (((31 * (54)) / 255) << 11) |
+           (((63 * (109)) / 255) << 5) |
+           ((31 * (54)) / 255);
 #else
-      return (col << 13) | (col << 10) | (col << 5) | (12 << 0);
+    return (col << 13) | (col << 10) | (col << 5) | (12 << 0);
 #endif
 }
 
@@ -147,43 +147,43 @@ static void nxrgui_color_rect(
     unsigned width, unsigned height,
     uint16_t color)
 {
-      unsigned i, j;
+    unsigned i, j;
 
-      for (j = y; j < y + height; j++)
-            for (i = x; i < x + width; i++)
-                  if (i < fb_width && j < fb_height)
-                        data[j * (pitch >> 1) + i] = color;
+    for (j = y; j < y + height; j++)
+        for (i = x; i < x + width; i++)
+            if (i < fb_width && j < fb_height)
+                data[j * (pitch >> 1) + i] = color;
 }
 
 static void blit_line(int x, int y,
                       const char *message, uint16_t color)
 {
-      size_t pitch = menu_display_get_framebuffer_pitch();
-      const uint8_t *font_fb = menu_display_get_font_framebuffer();
+    size_t pitch = menu_display_get_framebuffer_pitch();
+    const uint8_t *font_fb = menu_display_get_font_framebuffer();
 
-      if (font_fb)
-      {
-            while (!string_is_empty(message))
+    if (font_fb)
+    {
+        while (!string_is_empty(message))
+        {
+            unsigned i, j;
+            char symbol = *message++;
+
+            for (j = 0; j < FONT_HEIGHT; j++)
             {
-                  unsigned i, j;
-                  char symbol = *message++;
+                for (i = 0; i < FONT_WIDTH; i++)
+                {
+                    uint8_t rem = 1 << ((i + j * FONT_WIDTH) & 7);
+                    int offset = (i + j * FONT_WIDTH) >> 3;
+                    bool col = (font_fb[FONT_OFFSET(symbol) + offset] & rem);
 
-                  for (j = 0; j < FONT_HEIGHT; j++)
-                  {
-                        for (i = 0; i < FONT_WIDTH; i++)
-                        {
-                              uint8_t rem = 1 << ((i + j * FONT_WIDTH) & 7);
-                              int offset = (i + j * FONT_WIDTH) >> 3;
-                              bool col = (font_fb[FONT_OFFSET(symbol) + offset] & rem);
-
-                              if (col)
-                                    nxrgui_framebuf_data[(y + j) * (pitch >> 1) + (x + i)] = color;
-                        }
-                  }
-
-                  x += FONT_WIDTH_STRIDE;
+                    if (col)
+                        nxrgui_framebuf_data[(y + j) * (pitch >> 1) + (x + i)] = color;
+                }
             }
-      }
+
+            x += FONT_WIDTH_STRIDE;
+        }
+    }
 }
 
 #if 0
@@ -242,695 +242,697 @@ static bool nxrguidisp_init_font(menu_handle_t *menu)
 #if 0
    const uint8_t *font_bmp_buf = NULL;
 #endif
-      const uint8_t *font_bin_buf = bitmap_bin;
+    const uint8_t *font_bin_buf = bitmap_bin;
 
-      if (!menu)
-            return false;
+    if (!menu)
+        return false;
 
 #if 0
    if (font_bmp_buf)
       return init_font(menu, font_bmp_buf);
 #endif
 
-      menu_display_set_font_framebuffer(font_bin_buf);
+    menu_display_set_font_framebuffer(font_bin_buf);
 
-      return true;
+    return true;
 }
 
 static void nxrgui_render_background(nxrgui_t *nxrgui)
 {
-      size_t pitch_in_pixels, size;
-      size_t fb_pitch;
-      unsigned fb_width, fb_height;
-      uint16_t *src = NULL;
-      uint16_t *dst = NULL;
+    size_t pitch_in_pixels, size;
+    size_t fb_pitch;
+    unsigned fb_width, fb_height;
+    uint16_t *src = NULL;
+    uint16_t *dst = NULL;
 
-      menu_display_get_fb_size(&fb_width, &fb_height, &fb_pitch);
-      pitch_in_pixels = fb_pitch >> 1;
-      size = fb_pitch * 4;
-      src = nxrgui_framebuf_data + pitch_in_pixels * fb_height;
-      dst = nxrgui_framebuf_data;
+    menu_display_get_fb_size(&fb_width, &fb_height, &fb_pitch);
+    pitch_in_pixels = fb_pitch >> 1;
+    size = fb_pitch * 4;
+    src = nxrgui_framebuf_data + pitch_in_pixels * fb_height;
+    dst = nxrgui_framebuf_data;
 
-      while (dst < src)
-      {
-            memset(dst, 0, size);
-            dst += pitch_in_pixels * 4;
-      }
+    while (dst < src)
+    {
+        memset(dst, 0, size);
+        dst += pitch_in_pixels * 4;
+    }
 
-      if (nxrgui_framebuf_data)
-      {
-            settings_t *settings = config_get_ptr();
-      }
+    if (nxrgui_framebuf_data)
+    {
+        settings_t *settings = config_get_ptr();
+    }
 }
 
 static void nxrgui_set_message(void *data, const char *message)
 {
-      nxrgui_t *nxrgui = (nxrgui_t *)data;
+    nxrgui_t *nxrgui = (nxrgui_t *)data;
 
-      if (!nxrgui || !message || !*message)
-            return;
+    if (!nxrgui || !message || !*message)
+        return;
 
-      if (!string_is_empty(nxrgui->msgbox))
-            free(nxrgui->msgbox);
-      nxrgui->msgbox = strdup(message);
-      nxrgui->force_redraw = true;
+    if (!string_is_empty(nxrgui->msgbox))
+        free(nxrgui->msgbox);
+    nxrgui->msgbox = strdup(message);
+    nxrgui->force_redraw = true;
 }
 
 static void nxrgui_render_messagebox(nxrgui_t *nxrgui, const char *message)
 {
-      int x, y;
-      uint16_t color;
-      size_t i, fb_pitch;
-      unsigned fb_width, fb_height;
-      unsigned width, glyphs_width, height;
-      struct string_list *list = NULL;
-      settings_t *settings = config_get_ptr();
+    int x, y;
+    uint16_t color;
+    size_t i, fb_pitch;
+    unsigned fb_width, fb_height;
+    unsigned width, glyphs_width, height;
+    struct string_list *list = NULL;
+    settings_t *settings = config_get_ptr();
 
-      (void)settings;
+    (void)settings;
 
-      if (!message || !*message)
-            return;
+    if (!message || !*message)
+        return;
 
-      list = string_split(message, "\n");
-      if (!list)
-            return;
-      if (list->elems == 0)
-            goto end;
+    list = string_split(message, "\n");
+    if (!list)
+        return;
+    if (list->elems == 0)
+        goto end;
 
-      width = 0;
-      glyphs_width = 0;
+    width = 0;
+    glyphs_width = 0;
 
-      menu_display_get_fb_size(&fb_width, &fb_height,
-                               &fb_pitch);
+    menu_display_get_fb_size(&fb_width, &fb_height,
+                             &fb_pitch);
 
-      for (i = 0; i < list->size; i++)
-      {
-            unsigned line_width;
-            char *msg = list->elems[i].data;
-            unsigned msglen = (unsigned)utf8len(msg);
+    for (i = 0; i < list->size; i++)
+    {
+        unsigned line_width;
+        char *msg = list->elems[i].data;
+        unsigned msglen = (unsigned)utf8len(msg);
 
-            if (msglen > nxrgui_TERM_WIDTH(fb_width))
-            {
-                  msg[nxrgui_TERM_WIDTH(fb_width) - 2] = '.';
-                  msg[nxrgui_TERM_WIDTH(fb_width) - 1] = '.';
-                  msg[nxrgui_TERM_WIDTH(fb_width) - 0] = '.';
-                  msg[nxrgui_TERM_WIDTH(fb_width) + 1] = '\0';
-                  msglen = nxrgui_TERM_WIDTH(fb_width);
-            }
+        if (msglen > nxrgui_TERM_WIDTH(fb_width))
+        {
+            msg[nxrgui_TERM_WIDTH(fb_width) - 2] = '.';
+            msg[nxrgui_TERM_WIDTH(fb_width) - 1] = '.';
+            msg[nxrgui_TERM_WIDTH(fb_width) - 0] = '.';
+            msg[nxrgui_TERM_WIDTH(fb_width) + 1] = '\0';
+            msglen = nxrgui_TERM_WIDTH(fb_width);
+        }
 
-            line_width = msglen * FONT_WIDTH_STRIDE - 1 + 6 + 10;
-            width = MAX(width, line_width);
-            glyphs_width = MAX(glyphs_width, msglen);
-      }
+        line_width = msglen * FONT_WIDTH_STRIDE - 1 + 6 + 10;
+        width = MAX(width, line_width);
+        glyphs_width = MAX(glyphs_width, msglen);
+    }
 
-      height = (unsigned)(FONT_HEIGHT_STRIDE * list->size + 6 + 10);
-      x = (fb_width - width) / 2;
-      y = (fb_height - height) / 2;
+    height = (unsigned)(FONT_HEIGHT_STRIDE * list->size + 6 + 10);
+    x = (fb_width - width) / 2;
+    y = (fb_height - height) / 2;
 
-      color = NORMAL_COLOR(settings);
+    color = NORMAL_COLOR(settings);
 
-      for (i = 0; i < list->size; i++)
-      {
-            const char *msg = list->elems[i].data;
-            int offset_x = (int)(FONT_WIDTH_STRIDE * (glyphs_width - utf8len(msg)) / 2);
-            int offset_y = (int)(FONT_HEIGHT_STRIDE * i);
+    for (i = 0; i < list->size; i++)
+    {
+        const char *msg = list->elems[i].data;
+        int offset_x = (int)(FONT_WIDTH_STRIDE * (glyphs_width - utf8len(msg)) / 2);
+        int offset_y = (int)(FONT_HEIGHT_STRIDE * i);
 
-            if (nxrgui_framebuf_data)
-                  blit_line(x + 8 + offset_x, y + 8 + offset_y, msg, color);
-      }
+        if (nxrgui_framebuf_data)
+            blit_line(x + 8 + offset_x, y + 8 + offset_y, msg, color);
+    }
 
 end:
-      string_list_free(list);
+    string_list_free(list);
 }
 
 static void nxrgui_blit_cursor(void)
 {
-      size_t fb_pitch;
-      unsigned fb_width, fb_height;
-      int16_t x = menu_input_mouse_state(MENU_MOUSE_X_AXIS);
-      int16_t y = menu_input_mouse_state(MENU_MOUSE_Y_AXIS);
+    size_t fb_pitch;
+    unsigned fb_width, fb_height;
+    int16_t x = menu_input_mouse_state(MENU_MOUSE_X_AXIS);
+    int16_t y = menu_input_mouse_state(MENU_MOUSE_Y_AXIS);
 
-      menu_display_get_fb_size(&fb_width, &fb_height,
-                               &fb_pitch);
+    menu_display_get_fb_size(&fb_width, &fb_height,
+                             &fb_pitch);
 
-      if (nxrgui_framebuf_data)
-      {
-            nxrgui_color_rect(nxrgui_framebuf_data, fb_pitch, fb_width, fb_height, x, y - 5, 1, 11, 0xFFFF);
-            nxrgui_color_rect(nxrgui_framebuf_data, fb_pitch, fb_width, fb_height, x - 5, y, 11, 1, 0xFFFF);
-      }
+    if (nxrgui_framebuf_data)
+    {
+        nxrgui_color_rect(nxrgui_framebuf_data, fb_pitch, fb_width, fb_height, x, y - 5, 1, 11, 0xFFFF);
+        nxrgui_color_rect(nxrgui_framebuf_data, fb_pitch, fb_width, fb_height, x - 5, y, 11, 1, 0xFFFF);
+    }
 }
 
 static void nxrgui_frame(void *data, video_frame_info_t *video_info)
 {
-      nxrgui_t *nxrgui = (nxrgui_t *)data;
-      settings_t *settings = config_get_ptr();
+    nxrgui_t *nxrgui = (nxrgui_t *)data;
+    settings_t *settings = config_get_ptr();
 
-      if ((settings->bools.menu_rgui_background_filler_thickness_enable != nxrgui->bg_thickness) ||
-          (settings->bools.menu_rgui_border_filler_thickness_enable != nxrgui->border_thickness))
-            nxrgui->bg_modified = true;
-            
-      unsigned fbWidth;
-      unsigned fbHeight;
+    if ((settings->bools.menu_rgui_background_filler_thickness_enable != nxrgui->bg_thickness) ||
+        (settings->bools.menu_rgui_border_filler_thickness_enable != nxrgui->border_thickness))
+        nxrgui->bg_modified = true;
 
-      uint32_t* fb = (uint32_t*) gfxGetFramebuffer(&fbWidth, &fbHeight);
+    unsigned fbWidth;
+    unsigned fbHeight;
 
-      nxrgui->bg_thickness = settings->bools.menu_rgui_background_filler_thickness_enable;
-      nxrgui->border_thickness = settings->bools.menu_rgui_border_filler_thickness_enable;
-      
-      //menu_display_draw_text(nxrgui->font, "Hello from freetype2!", 23, 23, fbWidth, fbHeight, 0xFFFFFFFF, TEXT_ALIGN_LEFT, 1.0f, false, 0);
-      
-      nxrgui->frame_count++;
+    uint32_t *fb = (uint32_t *)gfxGetFramebuffer(&fbWidth, &fbHeight);
+
+    nxrgui->bg_thickness = settings->bools.menu_rgui_background_filler_thickness_enable;
+    nxrgui->border_thickness = settings->bools.menu_rgui_border_filler_thickness_enable;
+
+    //menu_display_draw_text(nxrgui->font, "Hello from freetype2!", 23, 23, fbWidth, fbHeight, 0xFFFFFFFF, TEXT_ALIGN_LEFT, 1.0f, false, 0);
+
+    nxrgui->frame_count++;
 }
 
 static void nxrgui_render(void *data, bool is_idle)
 {
-      menu_animation_ctx_ticker_t ticker;
-      unsigned x, y;
-      uint16_t hover_color, normal_color;
-      size_t i, end, fb_pitch, old_start;
-      unsigned fb_width, fb_height;
-      int bottom;
-      char title[255];
-      char title_buf[255];
-      char title_msg[64];
-      char msg[255];
-      size_t entries_end = 0;
-      bool msg_force = false;
-      settings_t *settings = config_get_ptr();
-      nxrgui_t *nxrgui = (nxrgui_t *)data;
-      uint64_t frame_count = nxrgui->frame_count;
+    menu_animation_ctx_ticker_t ticker;
+    unsigned x, y;
+    uint16_t hover_color, normal_color;
+    size_t i, end, fb_pitch, old_start;
+    unsigned fb_width, fb_height;
+    int bottom;
+    char title[255];
+    char title_buf[255];
+    char title_msg[64];
+    char msg[255];
+    size_t entries_end = 0;
+    bool msg_force = false;
+    settings_t *settings = config_get_ptr();
+    nxrgui_t *nxrgui = (nxrgui_t *)data;
+    uint64_t frame_count = nxrgui->frame_count;
 
-      msg[0] = title[0] = title_buf[0] = title_msg[0] = '\0';
+    msg[0] = title[0] = title_buf[0] = title_msg[0] = '\0';
 
-      if (!nxrgui->force_redraw)
-      {
-            msg_force = menu_display_get_msg_force();
+    if (!nxrgui->force_redraw)
+    {
+        msg_force = menu_display_get_msg_force();
 
-            if (menu_entries_ctl(MENU_ENTRIES_CTL_NEEDS_REFRESH, NULL) && menu_driver_is_alive() && !msg_force)
-                  return;
+        if (menu_entries_ctl(MENU_ENTRIES_CTL_NEEDS_REFRESH, NULL) && menu_driver_is_alive() && !msg_force)
+            return;
 
-            if (is_idle || !menu_display_get_update_pending())
-                  return;
-      }
+        if (is_idle || !menu_display_get_update_pending())
+            return;
+    }
 
-      menu_display_get_fb_size(&fb_width, &fb_height, &fb_pitch);
+    menu_display_get_fb_size(&fb_width, &fb_height, &fb_pitch);
 
-      /* if the framebuffer changed size, recache the background */
-      if (nxrgui->bg_modified || nxrgui->last_width != fb_width || nxrgui->last_height != fb_height)
-      {
-            nxrgui->last_height = fb_height;
-      }
+    /* if the framebuffer changed size, recache the background */
+    if (nxrgui->bg_modified || nxrgui->last_width != fb_width || nxrgui->last_height != fb_height)
+    {
+        nxrgui->last_height = fb_height;
+    }
 
-      if (nxrgui->bg_modified)
-            nxrgui->bg_modified = false;
+    if (nxrgui->bg_modified)
+        nxrgui->bg_modified = false;
 
-      menu_display_set_framebuffer_dirty_flag();
-      menu_animation_ctl(MENU_ANIMATION_CTL_CLEAR_ACTIVE, NULL);
+    menu_display_set_framebuffer_dirty_flag();
+    menu_animation_ctl(MENU_ANIMATION_CTL_CLEAR_ACTIVE, NULL);
 
-      nxrgui->force_redraw = false;
+    nxrgui->force_redraw = false;
 
-      if (settings->bools.menu_pointer_enable)
-      {
-            unsigned new_val;
+    if (settings->bools.menu_pointer_enable)
+    {
+        unsigned new_val;
 
-            menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &old_start);
+        menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &old_start);
 
-            new_val = (unsigned)(menu_input_pointer_state(MENU_POINTER_Y_AXIS) / (11 - 2 + old_start));
+        new_val = (unsigned)(menu_input_pointer_state(MENU_POINTER_Y_AXIS) / (11 - 2 + old_start));
 
-            menu_input_ctl(MENU_INPUT_CTL_POINTER_PTR, &new_val);
+        menu_input_ctl(MENU_INPUT_CTL_POINTER_PTR, &new_val);
 
-            if (menu_input_ctl(MENU_INPUT_CTL_IS_POINTER_DRAGGED, NULL))
-            {
-                  size_t start;
-                  int16_t delta_y = menu_input_pointer_state(MENU_POINTER_DELTA_Y_AXIS);
-                  nxrgui->scroll_y += delta_y;
+        if (menu_input_ctl(MENU_INPUT_CTL_IS_POINTER_DRAGGED, NULL))
+        {
+            size_t start;
+            int16_t delta_y = menu_input_pointer_state(MENU_POINTER_DELTA_Y_AXIS);
+            nxrgui->scroll_y += delta_y;
 
-                  start = -nxrgui->scroll_y / 11 + 2;
+            start = -nxrgui->scroll_y / 11 + 2;
 
-                  menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
-
-                  if (nxrgui->scroll_y > 0)
-                        nxrgui->scroll_y = 0;
-            }
-      }
-
-      if (settings->bools.menu_mouse_enable)
-      {
-            unsigned new_mouse_ptr;
-            int16_t mouse_y = menu_input_mouse_state(MENU_MOUSE_Y_AXIS);
-
-            menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &old_start);
-
-            new_mouse_ptr = (unsigned)(mouse_y / 11 - 2 + old_start);
-
-            menu_input_ctl(MENU_INPUT_CTL_MOUSE_PTR, &new_mouse_ptr);
-      }
-
-      /* Do not scroll if all items are visible. */
-      if (menu_entries_get_size() <= nxrgui_TERM_HEIGHT(fb_width, fb_height))
-      {
-            size_t start = 0;
             menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
-      }
 
-      bottom = (int)(menu_entries_get_size() - nxrgui_TERM_HEIGHT(fb_width, fb_height));
-      menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &old_start);
+            if (nxrgui->scroll_y > 0)
+                nxrgui->scroll_y = 0;
+        }
+    }
 
-      if (old_start > (unsigned)bottom)
-            menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &bottom);
+    if (settings->bools.menu_mouse_enable)
+    {
+        unsigned new_mouse_ptr;
+        int16_t mouse_y = menu_input_mouse_state(MENU_MOUSE_Y_AXIS);
 
-      menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &old_start);
+        menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &old_start);
 
-      entries_end = menu_entries_get_size();
+        new_mouse_ptr = (unsigned)(mouse_y / 11 - 2 + old_start);
 
-      end = ((old_start + nxrgui_TERM_HEIGHT(fb_width, fb_height)) <= (entries_end)) ? old_start + nxrgui_TERM_HEIGHT(fb_width, fb_height) : entries_end;
+        menu_input_ctl(MENU_INPUT_CTL_MOUSE_PTR, &new_mouse_ptr);
+    }
 
-      nxrgui_render_background(nxrgui);
+    /* Do not scroll if all items are visible. */
+    if (menu_entries_get_size() <= nxrgui_TERM_HEIGHT(fb_width, fb_height))
+    {
+        size_t start = 0;
+        menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
+    }
 
-      menu_entries_get_title(title, sizeof(title));
+    bottom = (int)(menu_entries_get_size() - nxrgui_TERM_HEIGHT(fb_width, fb_height));
+    menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &old_start);
 
-      ticker.s = title_buf;
-      ticker.len = nxrgui_TERM_WIDTH(fb_width) - 10;
-      ticker.idx = frame_count / nxrgui_TERM_START_X(fb_width);
-      ticker.str = title;
-      ticker.selected = true;
+    if (old_start > (unsigned)bottom)
+        menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &bottom);
 
-      menu_animation_ticker(&ticker);
+    menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &old_start);
 
-      hover_color = HOVER_COLOR(settings);
-      normal_color = NORMAL_COLOR(settings);
+    entries_end = menu_entries_get_size();
 
-      if (menu_entries_ctl(MENU_ENTRIES_CTL_SHOW_BACK, NULL))
-      {
-            char back_buf[32];
-            char back_msg[32];
+    end = ((old_start + nxrgui_TERM_HEIGHT(fb_width, fb_height)) <= (entries_end)) ? old_start + nxrgui_TERM_HEIGHT(fb_width, fb_height) : entries_end;
 
-            back_buf[0] = back_msg[0] = '\0';
+    nxrgui_render_background(nxrgui);
 
-            strlcpy(back_buf, msg_hash_to_str(MENU_ENUM_LABEL_VALUE_BASIC_MENU_CONTROLS_BACK), sizeof(back_buf));
-            string_to_upper(back_buf);
-            if (nxrgui_framebuf_data)
-                  blit_line(
-                      nxrgui_TERM_START_X(fb_width),
-                      nxrgui_TERM_START_X(fb_width),
-                      back_msg,
-                      TITLE_COLOR(settings));
-      }
+    menu_entries_get_title(title, sizeof(title));
 
-      string_to_upper(title_buf);
+    ticker.s = title_buf;
+    ticker.len = nxrgui_TERM_WIDTH(fb_width) - 10;
+    ticker.idx = frame_count / nxrgui_TERM_START_X(fb_width);
+    ticker.str = title;
+    ticker.selected = true;
 
-      if (nxrgui_framebuf_data)
+    menu_animation_ticker(&ticker);
+
+    hover_color = HOVER_COLOR(settings);
+    normal_color = NORMAL_COLOR(settings);
+
+    if (menu_entries_ctl(MENU_ENTRIES_CTL_SHOW_BACK, NULL))
+    {
+        char back_buf[32];
+        char back_msg[32];
+
+        back_buf[0] = back_msg[0] = '\0';
+
+        strlcpy(back_buf, msg_hash_to_str(MENU_ENUM_LABEL_VALUE_BASIC_MENU_CONTROLS_BACK), sizeof(back_buf));
+        string_to_upper(back_buf);
+        if (nxrgui_framebuf_data)
             blit_line(
-                (int)(nxrgui_TERM_START_X(fb_width) + (nxrgui_TERM_WIDTH(fb_width) - utf8len(title_buf)) * FONT_WIDTH_STRIDE / 2),
                 nxrgui_TERM_START_X(fb_width),
-                title_buf, TITLE_COLOR(settings));
+                nxrgui_TERM_START_X(fb_width),
+                back_msg,
+                TITLE_COLOR(settings));
+    }
 
-      if (settings->bools.menu_core_enable &&
-          menu_entries_get_core_title(title_msg, sizeof(title_msg)) == 0)
-      {
-            if (nxrgui_framebuf_data)
-                  blit_line(
-                      nxrgui_TERM_START_X(fb_width),
-                      (nxrgui_TERM_HEIGHT(fb_width, fb_height) * FONT_HEIGHT_STRIDE) +
-                          nxrgui_TERM_START_Y(fb_height) + 2,
-                      title_msg, hover_color);
-      }
+    string_to_upper(title_buf);
 
-      if (settings->bools.menu_timedate_enable)
-      {
-            menu_display_ctx_datetime_t datetime;
-            char timedate[255];
+    if (nxrgui_framebuf_data)
+        blit_line(
+            (int)(nxrgui_TERM_START_X(fb_width) + (nxrgui_TERM_WIDTH(fb_width) - utf8len(title_buf)) * FONT_WIDTH_STRIDE / 2),
+            nxrgui_TERM_START_X(fb_width),
+            title_buf, TITLE_COLOR(settings));
 
-            timedate[0] = '\0';
+    if (settings->bools.menu_core_enable &&
+        menu_entries_get_core_title(title_msg, sizeof(title_msg)) == 0)
+    {
+        if (nxrgui_framebuf_data)
+            blit_line(
+                nxrgui_TERM_START_X(fb_width),
+                (nxrgui_TERM_HEIGHT(fb_width, fb_height) * FONT_HEIGHT_STRIDE) +
+                    nxrgui_TERM_START_Y(fb_height) + 2,
+                title_msg, hover_color);
+    }
 
-            datetime.s = timedate;
-            datetime.len = sizeof(timedate);
-            datetime.time_mode = 3;
+    if (settings->bools.menu_timedate_enable)
+    {
+        menu_display_ctx_datetime_t datetime;
+        char timedate[255];
 
-            menu_display_timedate(&datetime);
+        timedate[0] = '\0';
 
-            if (nxrgui_framebuf_data)
-                  blit_line(
-                      nxrgui_TERM_WIDTH(fb_width) * FONT_WIDTH_STRIDE - nxrgui_TERM_START_X(fb_width),
-                      (nxrgui_TERM_HEIGHT(fb_width, fb_height) * FONT_HEIGHT_STRIDE) +
-                          nxrgui_TERM_START_Y(fb_height) + 2,
-                      timedate, hover_color);
-      }
+        datetime.s = timedate;
+        datetime.len = sizeof(timedate);
+        datetime.time_mode = 3;
 
-      x = nxrgui_TERM_START_X(fb_width);
-      y = nxrgui_TERM_START_Y(fb_height);
+        menu_display_timedate(&datetime);
 
-      menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &i);
+        if (nxrgui_framebuf_data)
+            blit_line(
+                nxrgui_TERM_WIDTH(fb_width) * FONT_WIDTH_STRIDE - nxrgui_TERM_START_X(fb_width),
+                (nxrgui_TERM_HEIGHT(fb_width, fb_height) * FONT_HEIGHT_STRIDE) +
+                    nxrgui_TERM_START_Y(fb_height) + 2,
+                timedate, hover_color);
+    }
 
-      for (; i < end; i++, y += FONT_HEIGHT_STRIDE)
-      {
-            menu_entry_t entry;
-            menu_animation_ctx_ticker_t ticker;
-            char entry_value[255];
-            char message[255];
-            char entry_title_buf[255];
-            char type_str_buf[255];
-            char *entry_path = NULL;
-            unsigned entry_spacing = 0;
-            size_t entry_title_buf_utf8len = 0;
-            size_t entry_title_buf_len = 0;
-            bool entry_selected = menu_entry_is_currently_selected((unsigned)i);
-            size_t selection = menu_navigation_get_selection();
+    x = nxrgui_TERM_START_X(fb_width);
+    y = nxrgui_TERM_START_Y(fb_height);
 
-            if (i > (selection + 100))
-                  continue;
+    menu_entries_ctl(MENU_ENTRIES_CTL_START_GET, &i);
 
-            entry_value[0] = '\0';
-            message[0] = '\0';
-            entry_title_buf[0] = '\0';
-            type_str_buf[0] = '\0';
+    for (; i < end; i++, y += FONT_HEIGHT_STRIDE)
+    {
+        menu_entry_t entry;
+        menu_animation_ctx_ticker_t ticker;
+        char entry_value[255];
+        char message[255];
+        char entry_title_buf[255];
+        char type_str_buf[255];
+        char *entry_path = NULL;
+        unsigned entry_spacing = 0;
+        size_t entry_title_buf_utf8len = 0;
+        size_t entry_title_buf_len = 0;
+        bool entry_selected = menu_entry_is_currently_selected((unsigned)i);
+        size_t selection = menu_navigation_get_selection();
 
-            menu_entry_init(&entry);
-            menu_entry_get(&entry, 0, (unsigned)i, NULL, true);
+        if (i > (selection + 100))
+            continue;
 
-            entry_spacing = menu_entry_get_spacing(&entry);
-            menu_entry_get_value(&entry, entry_value, sizeof(entry_value));
-            entry_path = menu_entry_get_rich_label(&entry);
+        entry_value[0] = '\0';
+        message[0] = '\0';
+        entry_title_buf[0] = '\0';
+        type_str_buf[0] = '\0';
 
-            ticker.s = entry_title_buf;
-            ticker.len = nxrgui_TERM_WIDTH(fb_width) - (entry_spacing + 1 + 2);
-            ticker.idx = frame_count / nxrgui_TERM_START_X(fb_width);
-            ticker.str = entry_path;
-            ticker.selected = entry_selected;
+        menu_entry_init(&entry);
+        menu_entry_get(&entry, 0, (unsigned)i, NULL, true);
 
-            menu_animation_ticker(&ticker);
+        entry_spacing = menu_entry_get_spacing(&entry);
+        menu_entry_get_value(&entry, entry_value, sizeof(entry_value));
+        entry_path = menu_entry_get_rich_label(&entry);
 
-            ticker.s = type_str_buf;
-            ticker.len = entry_spacing;
-            ticker.str = entry_value;
+        ticker.s = entry_title_buf;
+        ticker.len = nxrgui_TERM_WIDTH(fb_width) - (entry_spacing + 1 + 2);
+        ticker.idx = frame_count / nxrgui_TERM_START_X(fb_width);
+        ticker.str = entry_path;
+        ticker.selected = entry_selected;
 
-            menu_animation_ticker(&ticker);
+        menu_animation_ticker(&ticker);
 
-            entry_title_buf_utf8len = utf8len(entry_title_buf);
-            entry_title_buf_len = strlen(entry_title_buf);
+        ticker.s = type_str_buf;
+        ticker.len = entry_spacing;
+        ticker.str = entry_value;
 
-            snprintf(message, sizeof(message), "%c %-*.*s %-*s",
-                     entry_selected ? '>' : ' ',
-                     (int)(nxrgui_TERM_WIDTH(fb_width) - (entry_spacing + 1 + 2) - entry_title_buf_utf8len + entry_title_buf_len),
-                     (int)(nxrgui_TERM_WIDTH(fb_width) - (entry_spacing + 1 + 2) - entry_title_buf_utf8len + entry_title_buf_len),
-                     entry_title_buf,
-                     entry_spacing,
-                     type_str_buf);
+        menu_animation_ticker(&ticker);
 
-            if (nxrgui_framebuf_data)
-                  blit_line(x, y, message,
-                            entry_selected ? hover_color : normal_color);
+        entry_title_buf_utf8len = utf8len(entry_title_buf);
+        entry_title_buf_len = strlen(entry_title_buf);
 
-            menu_entry_free(&entry);
-            if (!string_is_empty(entry_path))
-                  free(entry_path);
-      }
+        snprintf(message, sizeof(message), "%c %-*.*s %-*s",
+                 entry_selected ? '>' : ' ',
+                 (int)(nxrgui_TERM_WIDTH(fb_width) - (entry_spacing + 1 + 2) - entry_title_buf_utf8len + entry_title_buf_len),
+                 (int)(nxrgui_TERM_WIDTH(fb_width) - (entry_spacing + 1 + 2) - entry_title_buf_utf8len + entry_title_buf_len),
+                 entry_title_buf,
+                 entry_spacing,
+                 type_str_buf);
 
-      if (menu_input_dialog_get_display_kb())
-      {
-            const char *str = menu_input_dialog_get_buffer();
-            const char *label = menu_input_dialog_get_label_buffer();
+        if (nxrgui_framebuf_data)
+            blit_line(x, y, message,
+                      entry_selected ? hover_color : normal_color);
 
-            snprintf(msg, sizeof(msg), "%s\n%s", label, str);
-            nxrgui_render_messagebox(nxrgui, msg);
-      }
+        menu_entry_free(&entry);
+        if (!string_is_empty(entry_path))
+            free(entry_path);
+    }
 
-      if (!string_is_empty(nxrgui->msgbox))
-      {
-            nxrgui_render_messagebox(nxrgui, nxrgui->msgbox);
-            free(nxrgui->msgbox);
-            nxrgui->msgbox = NULL;
-            nxrgui->force_redraw = true;
-      }
+    if (menu_input_dialog_get_display_kb())
+    {
+        const char *str = menu_input_dialog_get_buffer();
+        const char *label = menu_input_dialog_get_label_buffer();
 
-      if (nxrgui->mouse_show)
-      {
-            settings_t *settings = config_get_ptr();
-            bool cursor_visible = settings->bools.video_fullscreen ||
-                                  !video_driver_has_windowed();
+        snprintf(msg, sizeof(msg), "%s\n%s", label, str);
+        nxrgui_render_messagebox(nxrgui, msg);
+    }
 
-            if (settings->bools.menu_mouse_enable && cursor_visible)
-                  nxrgui_blit_cursor();
-      }
+    if (!string_is_empty(nxrgui->msgbox))
+    {
+        nxrgui_render_messagebox(nxrgui, nxrgui->msgbox);
+        free(nxrgui->msgbox);
+        nxrgui->msgbox = NULL;
+        nxrgui->force_redraw = true;
+    }
+
+    if (nxrgui->mouse_show)
+    {
+        settings_t *settings = config_get_ptr();
+        bool cursor_visible = settings->bools.video_fullscreen ||
+                              !video_driver_has_windowed();
+
+        if (settings->bools.menu_mouse_enable && cursor_visible)
+            nxrgui_blit_cursor();
+    }
 }
 
 static void nxrgui_framebuffer_free(void)
 {
-      if (nxrgui_framebuf_data)
-            free(nxrgui_framebuf_data);
-      nxrgui_framebuf_data = NULL;
+    if (nxrgui_framebuf_data)
+        free(nxrgui_framebuf_data);
+    nxrgui_framebuf_data = NULL;
 }
 
 static void *nxrgui_init(void **userdata, bool video_is_threaded)
 {
-      size_t fb_pitch, start;
-      unsigned fb_width, fb_height, new_font_height;
-      nxrgui_t *nxrgui = NULL;
-      bool ret = false;
-      settings_t *settings = config_get_ptr();
-      menu_handle_t *menu = (menu_handle_t *)calloc(1, sizeof(*menu));
+    size_t fb_pitch, start;
+    unsigned fb_width, fb_height, new_font_height;
+    nxrgui_t *nxrgui = NULL;
+    bool ret = false;
+    settings_t *settings = config_get_ptr();
+    menu_handle_t *menu = (menu_handle_t *)calloc(1, sizeof(*menu));
 
-      if (!menu)
-            return NULL;
+    if (!menu)
+        return NULL;
 
-      nxrgui = (nxrgui_t *)calloc(1, sizeof(nxrgui_t));
+    nxrgui = (nxrgui_t *)calloc(1, sizeof(nxrgui_t));
 
-      if (!nxrgui)
-            goto error;
+    if (!nxrgui)
+        goto error;
 
-      *userdata = nxrgui;
-      
-      if (!menu_display_init_first_driver(video_is_threaded))
-            goto error;
+    *userdata = nxrgui;
 
-      /* 4 extra lines to cache  the checked background */
-      nxrgui_framebuf_data = (uint16_t *)calloc(400 * (240 + 4), sizeof(uint16_t));
+    if (!menu_display_init_first_driver(video_is_threaded))
+        goto error;
 
-      if (!nxrgui_framebuf_data)
-            goto error;
+    /* 4 extra lines to cache  the checked background */
+    nxrgui_framebuf_data = (uint16_t *)calloc(400 * (240 + 4), sizeof(uint16_t));
 
-      fb_width = 320;
-      fb_height = 240;
+    if (!nxrgui_framebuf_data)
+        goto error;
 
-      fb_pitch = fb_width * sizeof(uint16_t);
-      new_font_height = FONT_HEIGHT_STRIDE * 2;
+    fb_width = 320;
+    fb_height = 240;
 
-      menu_display_set_width(fb_width);
-      menu_display_set_height(fb_height);
-      menu_display_set_header_height(new_font_height);
-      menu_display_set_framebuffer_pitch(fb_pitch);
+    fb_pitch = fb_width * sizeof(uint16_t);
+    new_font_height = FONT_HEIGHT_STRIDE * 2;
 
-      start = 0;
-      menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
+    menu_display_set_width(fb_width);
+    menu_display_set_height(fb_height);
+    menu_display_set_header_height(new_font_height);
+    menu_display_set_framebuffer_pitch(fb_pitch);
 
-      ret = nxrguidisp_init_font(menu);
+    start = 0;
+    menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
 
-      if (!ret)
-            goto error;
+    ret = nxrguidisp_init_font(menu);
 
-      nxrgui->bg_thickness = settings->bools.menu_rgui_background_filler_thickness_enable;
-      nxrgui->border_thickness = settings->bools.menu_rgui_border_filler_thickness_enable;
-      nxrgui->bg_modified = true;
+    if (!ret)
+        goto error;
 
-      nxrgui->last_width = fb_width;
-      nxrgui->last_height = fb_height;
+    nxrgui->bg_thickness = settings->bools.menu_rgui_background_filler_thickness_enable;
+    nxrgui->border_thickness = settings->bools.menu_rgui_border_filler_thickness_enable;
+    nxrgui->bg_modified = true;
 
-      // Load PNG Data
-      printf("[UI] Loading..\n");
+    nxrgui->last_width = fb_width;
+    nxrgui->last_height = fb_height;
 
-      uint32_t width, height;
-      width = height = 0;
+    // Load PNG Data
+    printf("[UI] Loading..\n");
 
-      rpng_load_image_argb("/retroarch/menu_bg_blank.png", &nx_backgroundImage, &width, &height);
-      if (nx_backgroundImage)
-      {
+    uint32_t width, height;
+    width = height = 0;
+
+    rpng_load_image_argb("/retroarch/menu_bg_blank.png", &nx_backgroundImage, &width, &height);
+    if (nx_backgroundImage)
+    {
+        // Convert
+        argb_to_rgba8(nx_backgroundImage, height, width);
+        printf("[NxRGUI] Menu loaded\n");
+    }
+    else
+    {
+        uint32_t buffSize = 1280 * 720 * sizeof(uint32_t);
+        nx_backgroundImage = malloc(buffSize);
+        memset(nx_backgroundImage, 0, buffSize);
+    }
+
+    // Temp overlay hack
+    // TODO: KILL IT WITH FIRE
+    // At least i try to give it some options, since loading the cfg's doesnt work with threading
+    rarch_system_info_t *sys_info = runloop_get_system_info();
+    const char *core_name = NULL;
+
+    if (sys_info)
+    {
+        core_name = sys_info->info.library_name;
+        printf("[Overlay] Load Overlay for Core: \"%s\"\n", core_name);
+        char *full_overlaypath = (char *)malloc(PATH_MAX);
+        snprintf(full_overlaypath, PATH_MAX, "/retroarch/overlays/%s.png", core_name);
+        rpng_load_image_argb(full_overlaypath, &tmp_overlay, &width, &height);
+        if (tmp_overlay)
+        {
             // Convert
-            argb_to_rgba8(nx_backgroundImage, height, width);
-            printf("[NxRGUI] Menu loaded\n");
-      }
-      else
-      {
-            nx_backgroundImage = malloc(1280 * 720 * sizeof(uint32_t));
-      }
-
-      // Temp overlay hack
-      // TODO: KILL IT WITH FIRE
-      // At least i try to give it some options, since loading the cfg's doesnt work with threading
-      rarch_system_info_t *sys_info = runloop_get_system_info();
-      const char *core_name = NULL;
-
-      if (sys_info)
-      {
-            core_name = sys_info->info.library_name;
-            printf("[Overlay] Load Overlay for Core: \"%s\"\n", core_name);
-            char* full_overlaypath = (char*)malloc(PATH_MAX);
-            snprintf(full_overlaypath, PATH_MAX, "/retroarch/overlays/%s.png", core_name);
-            rpng_load_image_argb(full_overlaypath, &tmp_overlay, &width, &height);
-            if (tmp_overlay)
-            {
-                  // Convert
-                  argb_to_rgba8(tmp_overlay, height, width);
-                  printf("[Overlay] Overlay loaded\n");
-            }
-            else
-            {
-                  printf("[Overlay] Overlay failed to load\n");
-                  tmp_overlay = NULL;
-            }
-            free(full_overlaypath);
-      }
-      else
-      {
+            argb_to_rgba8(tmp_overlay, height, width);
+            printf("[Overlay] Overlay loaded\n");
+        }
+        else
+        {
+            printf("[Overlay] Overlay failed to load\n");
             tmp_overlay = NULL;
-      }
+        }
+        free(full_overlaypath);
+    }
+    else
+    {
+        tmp_overlay = NULL;
+    }
 
-      return menu;
+    return menu;
 
 error:
-      nxrgui_framebuffer_free();
-      if (menu)
-            free(menu);
-      return NULL;
+    nxrgui_framebuffer_free();
+    if (menu)
+        free(menu);
+    return NULL;
 }
 
 static void nxrgui_free(void *data)
 {
-      const uint8_t *font_fb;
-      bool fb_font_inited = false;
+    const uint8_t *font_fb;
+    bool fb_font_inited = false;
 
-      fb_font_inited = menu_display_get_font_data_init();
-      font_fb = menu_display_get_font_framebuffer();
+    fb_font_inited = menu_display_get_font_data_init();
+    font_fb = menu_display_get_font_framebuffer();
 
-      if (fb_font_inited)
-            free((void *)font_fb);
+    if (fb_font_inited)
+        free((void *)font_fb);
 
-      fb_font_inited = false;
-      menu_display_set_font_data_init(fb_font_inited);
+    fb_font_inited = false;
+    menu_display_set_font_data_init(fb_font_inited);
 
-      if (nx_backgroundImage)
-      {
-            free(nx_backgroundImage);
-            nx_backgroundImage = NULL;
-      }
+    if (nx_backgroundImage)
+    {
+        free(nx_backgroundImage);
+        nx_backgroundImage = NULL;
+    }
 
-      // Temp Overlay hack
-      if (tmp_overlay)
-      {
-            free(tmp_overlay);
-            tmp_overlay = NULL;
-      }
+    // Temp Overlay hack
+    if (tmp_overlay)
+    {
+        free(tmp_overlay);
+        tmp_overlay = NULL;
+    }
 }
 
 static void nxrgui_set_texture(void)
 {
-      size_t fb_pitch;
-      unsigned fb_width, fb_height;
+    size_t fb_pitch;
+    unsigned fb_width, fb_height;
 
-      if (!menu_display_get_framebuffer_dirty_flag())
-            return;
+    if (!menu_display_get_framebuffer_dirty_flag())
+        return;
 
-      menu_display_get_fb_size(&fb_width, &fb_height,
-                               &fb_pitch);
+    menu_display_get_fb_size(&fb_width, &fb_height,
+                             &fb_pitch);
 
-      menu_display_unset_framebuffer_dirty_flag();
+    menu_display_unset_framebuffer_dirty_flag();
 
-      video_driver_set_texture_frame(nxrgui_framebuf_data,
-                                     false, fb_width, fb_height, 1.0f);
+    video_driver_set_texture_frame(nxrgui_framebuf_data,
+                                   false, fb_width, fb_height, 1.0f);
 }
 
 static void nxrgui_navigation_clear(void *data, bool pending_push)
 {
-      size_t start;
-      nxrgui_t *nxrgui = (nxrgui_t *)data;
-      if (!nxrgui)
-            return;
+    size_t start;
+    nxrgui_t *nxrgui = (nxrgui_t *)data;
+    if (!nxrgui)
+        return;
 
-      start = 0;
-      menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
-      nxrgui->scroll_y = 0;
+    start = 0;
+    menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
+    nxrgui->scroll_y = 0;
 }
 
 static void nxrgui_navigation_set(void *data, bool scroll)
 {
-      size_t start, fb_pitch;
-      unsigned fb_width, fb_height;
-      bool do_set_start = false;
-      size_t end = menu_entries_get_size();
-      size_t selection = menu_navigation_get_selection();
+    size_t start, fb_pitch;
+    unsigned fb_width, fb_height;
+    bool do_set_start = false;
+    size_t end = menu_entries_get_size();
+    size_t selection = menu_navigation_get_selection();
 
-      if (!scroll)
-            return;
+    if (!scroll)
+        return;
 
-      menu_display_get_fb_size(&fb_width, &fb_height,
-                               &fb_pitch);
+    menu_display_get_fb_size(&fb_width, &fb_height,
+                             &fb_pitch);
 
-      if (selection < nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2)
-      {
-            start = 0;
-            do_set_start = true;
-      }
-      else if (selection >= (nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2) && selection < (end - nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2))
-      {
-            start = selection - nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2;
-            do_set_start = true;
-      }
-      else if (selection >= (end - nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2))
-      {
-            start = end - nxrgui_TERM_HEIGHT(fb_width, fb_height);
-            do_set_start = true;
-      }
+    if (selection < nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2)
+    {
+        start = 0;
+        do_set_start = true;
+    }
+    else if (selection >= (nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2) && selection < (end - nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2))
+    {
+        start = selection - nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2;
+        do_set_start = true;
+    }
+    else if (selection >= (end - nxrgui_TERM_HEIGHT(fb_width, fb_height) / 2))
+    {
+        start = end - nxrgui_TERM_HEIGHT(fb_width, fb_height);
+        do_set_start = true;
+    }
 
-      if (do_set_start)
-            menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
+    if (do_set_start)
+        menu_entries_ctl(MENU_ENTRIES_CTL_SET_START, &start);
 }
 
 static void nxrgui_navigation_set_last(void *data)
 {
-      nxrgui_navigation_set(data, true);
+    nxrgui_navigation_set(data, true);
 }
 
 static void nxrgui_navigation_descend_alphabet(void *data, size_t *unused)
 {
-      nxrgui_navigation_set(data, true);
+    nxrgui_navigation_set(data, true);
 }
 
 static void nxrgui_navigation_ascend_alphabet(void *data, size_t *unused)
 {
-      nxrgui_navigation_set(data, true);
+    nxrgui_navigation_set(data, true);
 }
 
 static void nxrgui_populate_entries(void *data,
                                     const char *path,
                                     const char *label, unsigned k)
 {
-      nxrgui_navigation_set(data, true);
+    nxrgui_navigation_set(data, true);
 }
 
 static int nxrgui_environ(enum menu_environ_cb type,
                           void *data, void *userdata)
 {
-      nxrgui_t *nxrgui = (nxrgui_t *)userdata;
+    nxrgui_t *nxrgui = (nxrgui_t *)userdata;
 
-      switch (type)
-      {
-      case MENU_ENVIRON_ENABLE_MOUSE_CURSOR:
-            if (!nxrgui)
-                  return -1;
-            nxrgui->mouse_show = true;
-            menu_display_set_framebuffer_dirty_flag();
-            break;
-      case MENU_ENVIRON_DISABLE_MOUSE_CURSOR:
-            if (!nxrgui)
-                  return -1;
-            nxrgui->mouse_show = false;
-            menu_display_unset_framebuffer_dirty_flag();
-            break;
-      case 0:
-      default:
-            break;
-      }
+    switch (type)
+    {
+    case MENU_ENVIRON_ENABLE_MOUSE_CURSOR:
+        if (!nxrgui)
+            return -1;
+        nxrgui->mouse_show = true;
+        menu_display_set_framebuffer_dirty_flag();
+        break;
+    case MENU_ENVIRON_DISABLE_MOUSE_CURSOR:
+        if (!nxrgui)
+            return -1;
+        nxrgui->mouse_show = false;
+        menu_display_unset_framebuffer_dirty_flag();
+        break;
+    case 0:
+    default:
+        break;
+    }
 
-      return -1;
+    return -1;
 }
 
 static int nxrgui_pointer_tap(void *data,
@@ -938,47 +940,47 @@ static int nxrgui_pointer_tap(void *data,
                               unsigned ptr, menu_file_list_cbs_t *cbs,
                               menu_entry_t *entry, unsigned action)
 {
-      unsigned header_height = menu_display_get_header_height();
+    unsigned header_height = menu_display_get_header_height();
 
-      if (y < header_height)
-      {
-            size_t selection = menu_navigation_get_selection();
-            return menu_entry_action(entry, (unsigned)selection, MENU_ACTION_CANCEL);
-      }
-      else if (ptr <= (menu_entries_get_size() - 1))
-      {
-            size_t selection = menu_navigation_get_selection();
+    if (y < header_height)
+    {
+        size_t selection = menu_navigation_get_selection();
+        return menu_entry_action(entry, (unsigned)selection, MENU_ACTION_CANCEL);
+    }
+    else if (ptr <= (menu_entries_get_size() - 1))
+    {
+        size_t selection = menu_navigation_get_selection();
 
-            if (ptr == selection && cbs && cbs->action_select)
-                  return menu_entry_action(entry, (unsigned)selection, MENU_ACTION_SELECT);
+        if (ptr == selection && cbs && cbs->action_select)
+            return menu_entry_action(entry, (unsigned)selection, MENU_ACTION_SELECT);
 
-            menu_navigation_set_selection(ptr);
-            menu_driver_navigation_set(false);
-      }
+        menu_navigation_set_selection(ptr);
+        menu_driver_navigation_set(false);
+    }
 
-      return 0;
+    return 0;
 }
 
 static void nxrgui_context_reset(void *data, bool is_threaded)
 {
-    nxrgui_t* nxrgui = (nxrgui_t*) data;
-    
+    nxrgui_t *nxrgui = (nxrgui_t *)data;
+
     if (!nxrgui)
         return;
-    
+
     nxrgui->font = menu_display_font(APPLICATION_SPECIAL_DIRECTORY_ASSETS_NXRGUI_FONT, 24, is_threaded);
-    
+
     if (!nxrgui->font)
         printf("[NxRGUI] Unable to load font\n");
 }
 
 static void nxrgui_context_destroy(void *data)
 {
-    nxrgui_t* nxrgui = (nxrgui_t*) data;
-    
+    nxrgui_t *nxrgui = (nxrgui_t *)data;
+
     if (!nxrgui)
         return;
-        
+
     if (nxrgui->font)
         menu_display_font_free(nxrgui->font);
 }
