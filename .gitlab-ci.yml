@@ -4,6 +4,9 @@ variables:
 trigger_build:
   script:
     - "curl -X POST -F token=$TOKEN_SNES9X2010 -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/87/trigger/pipeline"
+    - "curl -X POST -F token=$TOKEN_DOSBOX -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/129/trigger/pipeline"
+    - "curl -X POST -F token=$TOKEN_PICODRIVE -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/132/trigger/pipeline"
+    - "curl -X POST -F token=$TOKEN_FMSX -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/133/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_FCEUMM -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/85/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_VBANEXT -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/83/trigger/pipeline"
     - "curl -X POST -F token=$TOKEN_SNES9X -F ref=$BRANCH https://git.m4xw.net/api/v4/projects/80/trigger/pipeline"
