@@ -681,6 +681,22 @@ static void nxrgui_framebuffer_free(void)
     nxrgui_framebuf_data = NULL;
 }
 
+static bool nxrgui_load_menu_bg(const char *path, uint32_t *width, uint32_t *height)
+{
+    // Default
+    rpng_load_image_argb(path, &nx_backgroundImage, width, height);
+    if (nx_backgroundImage)
+    {
+        // Convert
+        argb_to_rgba8(nx_backgroundImage, *height, *width);
+        return true;
+    }
+    else
+    {
+        return false;
+    }
+}
+
 static void *nxrgui_init(void **userdata, bool video_is_threaded)
 {
     size_t fb_pitch, start;
@@ -741,29 +757,49 @@ static void *nxrgui_init(void **userdata, bool video_is_threaded)
     uint32_t width, height;
     width = height = 0;
 
-    rpng_load_image_argb("/retroarch/menu_bg_blank.png", &nx_backgroundImage, &width, &height);
-    if (nx_backgroundImage)
+    // Core Info
+    rarch_system_info_t *sys_info = runloop_get_system_info();
+    const char *core_name = NULL;
+    bool menuFound = false;
+    if (sys_info)
     {
-        // Convert
-        argb_to_rgba8(nx_backgroundImage, height, width);
-        printf("[NxRGUI] Menu loaded\n");
+        core_name = sys_info->info.library_name;
+
+        char *full_core_menu_path = (char *)malloc(PATH_MAX);
+        snprintf(full_core_menu_path, PATH_MAX, "/retroarch/nxrgui/menu/%s.png", core_name);
+
+        // Default
+        if (nxrgui_load_menu_bg((const char *)full_core_menu_path, &width, &height))
+        {
+            printf("[NxRGUI] Menu loaded\n");
+            menuFound = true;
+        }
+
+        free(full_core_menu_path);
     }
-    else
+
+    if (!menuFound) // Fallback
     {
-        uint32_t buffSize = 1280 * 720 * sizeof(uint32_t);
-        nx_backgroundImage = malloc(buffSize);
-        memset(nx_backgroundImage, 0, buffSize);
+        // Default
+        if (nxrgui_load_menu_bg("/retroarch/nxrgui/menu/RetroNX.png", &width, &height))
+        {
+            menuFound = true;
+            printf("[NxRGUI] Menu loaded\n");
+        }
+        else
+        {
+            // Black bg Fallback
+            uint32_t buffSize = 1280 * 720 * sizeof(uint32_t);
+            nx_backgroundImage = malloc(buffSize);
+            memset(nx_backgroundImage, 0, buffSize);
+        }
     }
 
     // Temp overlay hack
     // TODO: KILL IT WITH FIRE
     // At least i try to give it some options, since loading the cfg's doesnt work with threading
-    rarch_system_info_t *sys_info = runloop_get_system_info();
-    const char *core_name = NULL;
-
     if (sys_info)
     {
-        core_name = sys_info->info.library_name;
         printf("[Overlay] Load Overlay for Core: \"%s\"\n", core_name);
         char *full_overlaypath = (char *)malloc(PATH_MAX);
         snprintf(full_overlaypath, PATH_MAX, "/retroarch/overlays/%s.png", core_name);
