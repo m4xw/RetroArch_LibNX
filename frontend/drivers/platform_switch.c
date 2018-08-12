@@ -390,6 +390,9 @@ end:
     return ret;
 }
 
+// runloop_get_system_info isnt initialized that early..
+extern void retro_get_system_info(struct retro_system_info *info);
+
 static void frontend_switch_init(void *data)
 {
     (void)data;
@@ -412,95 +415,57 @@ static void frontend_switch_init(void *data)
 #endif
 #endif
 
+    rarch_system_info_t *sys_info = runloop_get_system_info();
+    retro_get_system_info(sys_info);
+
+    const char *core_name = NULL;
+
     printf("[Video]: Video initialized\n");
+
+    uint32_t width, height;
+    width = height = 0;
 
     // Load splash
     if (!splashData)
     {
-        uint32_t width, height;
-        width = height = 0;
-
-        // Meh, filesize got too big..
-        rpng_load_image_argb("/retroarch/splash_01_720p.png", &splashData, &width, &height);
-        if (splashData)
+        if (sys_info)
         {
-            argb_to_rgba8(splashData, height, width);
-            frontend_switch_showsplash();
-        }
+            core_name = sys_info->info.library_name;
+            char *full_core_splash_path = (char *)malloc(PATH_MAX);
+            snprintf(full_core_splash_path, PATH_MAX, "/retroarch/nxrgui/splash/%s.png", core_name);
 
-#if 0
-            FILE *fsplash = fopen("romfs:/splash_01_720p.png", "r");
-            if (fsplash)
+            rpng_load_image_argb((const char *)full_core_splash_path, &splashData, &width, &height);
+            if (splashData)
             {
-                uint64_t fsize = 0;
-                fseek(fsplash, 0L, SEEK_END);
-                fsize = ftell(fsplash);
-                rewind(fsplash);
-
-                splashData = malloc(fsize);
+                argb_to_rgba8(splashData, height, width);
+                frontend_switch_showsplash();
+            }
+            else
+            {
+                rpng_load_image_argb("/retroarch/nxrgui/splash/RetroNX.png", &splashData, &width, &height);
                 if (splashData)
                 {
-                    // I am lazy
-                    fread(splashData, fsize, 1, fsplash);
-                    fclose(fsplash);
-                    if (splashData)
-                    {
-                        rpng_t *rpng = NULL;
-                        rpng_set_buf_ptr(rpng, splashData);
-                        rpng_start(rpng);
-                        while (rpng_iterate_image(rpng))
-                            ;
-
-                        if (!rpng_is_valid(rpng))
-                        {
-                            // Invalid image
-                            free(splashData);
-                            splashData = NULL;
-                        }
-                        else
-                        {
-                            int retval;
-                            uint32_t *tmpswap = NULL;
-
-                            do
-                            {
-                                retval = rpng_process_image(rpng, &tmpswap, fsize, 1280, 720);
-
-                                // Yield
-                                svcSleepThread(3);
-                            } while (retval == IMAGE_PROCESS_NEXT);
-
-                            rpng_free(rpng);
-                            if (tmpswap)
-                            {
-                                free(splashData);
-                                splashData = tmpswap;
-                            }
-                            frontend_switch_showsplash();
-                        }
-                    }
-                }
-                else
-                {
-                    // Uufff, no memory?
-                    // What were you doing??
-                    printf("??[Out of memory]??\n");
-                    fclose(fsplash);
+                    argb_to_rgba8(splashData, height, width);
+                    frontend_switch_showsplash();
                 }
             }
+
+            free(full_core_splash_path);
         }
         else
         {
-            // For future updates
-            frontend_switch_showsplash();
+            rpng_load_image_argb("/retroarch/nxrgui/splash/RetroNX.png", &splashData, &width, &height);
+            if (splashData)
+            {
+                argb_to_rgba8(splashData, height, width);
+                frontend_switch_showsplash();
+            }
         }
-#endif
     }
     else
     {
         frontend_switch_showsplash();
     }
-    //}
 }
 
 static int frontend_switch_get_rating(void)
