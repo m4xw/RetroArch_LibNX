@@ -61,7 +61,6 @@
 #define nxrgui_TERM_HEIGHT(width, height) (((height - nxrgui_TERM_START_Y(height) - nxrgui_TERM_START_X(width)) / (FONT_HEIGHT_STRIDE)) - 1)
 
 uint32_t *nx_backgroundImage = NULL;
-static uint16_t *nx_backgroundFb = NULL;
 
 // Extern Prototypes
 bool rpng_load_image_argb(const char *path, uint32_t **data, unsigned *width, unsigned *height);
@@ -751,7 +750,7 @@ static void *nxrgui_init(void **userdata, bool video_is_threaded)
       }
       else
       {
-            nx_backgroundFb = nx_backgroundImage = NULL;
+            nx_backgroundImage = malloc(1280 * 720 * sizeof(uint32_t));
       }
 
       // Temp overlay hack
