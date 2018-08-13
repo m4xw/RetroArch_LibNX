@@ -43,4 +43,4 @@ wget https://git.m4xw.net/Switch/RetroArch/mame2003-plus-libretro/-/jobs/artifac
 wget https://git.m4xw.net/Switch/RetroArch/pcsx_rearmed/-/jobs/artifacts/$BRANCH/download?job=$JOB -O pcsx_rearmed.zip
 wget https://git.m4xw.net/Switch/RetroArch/picodrive/-/jobs/artifacts/$BRANCH/download?job=$JOB -O picodrive.zip
 wget https://git.m4xw.net/Switch/RetroArch/fmsx/-/jobs/artifacts/$BRANCH/download?job=$JOB -O fmsx.zip
-wget https://git.m4xw.net/Switch/RetroArch/dosbox/-/jobs/artifacts/$BRANCH/download?job=$JOB -O dosbox.zip
+wget https://git.m4xw.net/Switch/RetroArch/dosbox-libretro/-/jobs/artifacts/$BRANCH/download?job=$JOB -O dosbox.zip
