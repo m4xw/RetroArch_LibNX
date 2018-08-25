@@ -410,8 +410,7 @@ static bool switch_frame(void *data, const void *frame,
 #ifdef HAVE_NXRGUI
             gfx_slow_swizzling_blit(out_buffer, nx_backgroundImage, sw->vp.full_width, sw->vp.full_height, 0, 0, false);
 #else
-            uint32_t *fbTempbuffer = (uint32_t *)gfxGetFramebuffer(NULL, NULL);
-            memset(fbTempbuffer, 0, gfxGetFramebufferSize());
+            memset(out_buffer, 0, gfxGetFramebufferSize());
 #endif
             scaler_ctx_scale(&sw->menu_texture.scaler, sw->tmp_image + ((sw->vp.full_height - sw->menu_texture.tgth) / 2) * sw->vp.full_width + ((sw->vp.full_width - sw->menu_texture.tgtw) / 2), sw->menu_texture.pixels);
             gfx_slow_swizzling_blit(out_buffer, sw->tmp_image, sw->vp.full_width, sw->vp.full_height, 0, 0, true);
