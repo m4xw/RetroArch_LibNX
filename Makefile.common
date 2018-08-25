@@ -604,6 +604,10 @@ ifeq ($(TARGET), retroarch_3ds)
 	OBJ += gfx/drivers_font/ctr_font.o
 endif
 
+ifeq ($(TARGET), retroarch_switch)
+	OBJ += gfx/drivers_font/switch_font.o
+endif
+
 ifeq ($(HAVE_OSS), 1)
    OBJ += audio/drivers/oss.o
 else ifeq ($(HAVE_OSS_BSD), 1)
@@ -857,6 +861,10 @@ ifeq ($(HAVE_THREAD_STORAGE), 1)
    DEFINES += -DHAVE_THREAD_STORAGE
 endif
 
+ifeq ($(HAVE_SWITCH), 1)
+   OBJ += $(LIBRETRO_COMM_DIR)/rthreads/switch_pthread.o
+endif
+
 ifeq ($(HAVE_VITA2D), 1)
 	OBJ += $(DEPS_DIR)/libvita2d/source/vita2d.o \
 			 $(DEPS_DIR)/libvita2d/source/vita2d_texture.o \
@@ -893,7 +901,8 @@ ifeq ($(TARGET), retroarch_switch)
          audio/drivers/switch_audio.o \
          audio/drivers/switch_thread_audio.o \
          input/drivers/switch_input.o \
-         gfx/drivers/switch_gfx.o 
+         gfx/drivers/switch_gfx.o \
+         menu/drivers_display/menu_display_switch.o
   ifeq ($(HAVE_DUMMY), 1)
     OBJ += switch/dummy.o
   endif
