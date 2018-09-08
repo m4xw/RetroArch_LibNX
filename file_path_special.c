@@ -358,6 +358,8 @@ void fill_pathname_application_special(char *s,
         free(s2);
       }
       break;
+      case APPLICATION_SPECIAL_DIRECTORY_ASSETS_NXRGUI_FONT:
+      break;
 
       case APPLICATION_SPECIAL_NONE:
       default:

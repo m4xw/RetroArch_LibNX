@@ -315,7 +315,8 @@ enum menu_display_driver_type
    MENU_VIDEO_DRIVER_WIIU,
    MENU_VIDEO_DRIVER_CACA,
    MENU_VIDEO_DRIVER_GDI,
-   MENU_VIDEO_DRIVER_VGA
+   MENU_VIDEO_DRIVER_VGA,
+   MENU_VIDEO_DRIVER_SWITCH
 };
 
 enum menu_toggle_reason
@@ -812,10 +813,12 @@ extern menu_display_ctx_driver_t menu_display_ctx_wiiu;
 extern menu_display_ctx_driver_t menu_display_ctx_caca;
 extern menu_display_ctx_driver_t menu_display_ctx_gdi;
 extern menu_display_ctx_driver_t menu_display_ctx_vga;
+extern menu_display_ctx_driver_t menu_display_ctx_switch;
 extern menu_display_ctx_driver_t menu_display_ctx_null;
 
 extern menu_ctx_driver_t menu_ctx_xui;
 extern menu_ctx_driver_t menu_ctx_rgui;
+extern menu_ctx_driver_t menu_ctx_nxrgui;
 extern menu_ctx_driver_t menu_ctx_mui;
 extern menu_ctx_driver_t menu_ctx_nuklear;
 extern menu_ctx_driver_t menu_ctx_xmb;
