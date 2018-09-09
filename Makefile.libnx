@@ -20,7 +20,7 @@ OBJ :=
 # For threading we need to overwrite some vars with global defines because devkitPro's includes 
 # make it hard for us. This works for the pthread wrapper
 DEFINES_THREAD := -Dpthread_t=Thread -Dpthread_mutex_t=Mutex -Dpthread_mutexattr_t='void*' -Dpthread_attr_t=int -Dpthread_cond_t=CondVar -Dpthread_condattr_t='int'
-DEFINES := -DHAVE_FREETYPE -DHAVE_THREADS -U__linux__ -U__linux -DRARCH_INTERNAL -D_SYS__PTHREADTYPES_H_ $(DEFINES_THREAD) -DGLOBAL_CONFIG_DIR='"/switch"'
+DEFINES := -DHAVE_THREADS -U__linux__ -U__linux -DRARCH_INTERNAL -D_SYS__PTHREADTYPES_H_ $(DEFINES_THREAD) -DGLOBAL_CONFIG_DIR='"/switch"'
 
 HAVE_CC_RESAMPLER = 1
 HAVE_MENU_COMMON = 1
@@ -44,7 +44,7 @@ HAVE_RUNAHEAD = 1
 HAVE_OVERLAY = 1
 HAVE_THREADS = 1
 HAVE_PTHREADS = 1
-HAVE_DUMMY = 0
+HAVE_DUMMY = 1
 HAVE_FREETYPE = 0
 HAVE_SWITCH = 1
 HAVE_LIBNX = 1
@@ -147,7 +147,7 @@ else
 endif
 #---------------------------------------------------------------------------------
 
-export OFILES 	:=	$(OBJ) libretro_switch.a
+export OFILES 	:=	$(OBJ) 
 export HFILES_BIN	:=	$(addsuffix .h,$(subst .,_,$(BINFILES)))
 
 export INCLUDE	:=	$(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
